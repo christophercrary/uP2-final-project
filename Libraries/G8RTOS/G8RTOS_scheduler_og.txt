@@ -1,0 +1,280 @@
+/************************************************************************************
+ *  File name: G8RTOS_scheduler.c
+ *  Modified: 10 September 2017
+ *  Author:  Christopher Crary
+ *  Purpose: To define useful functions for scheduling threads in the G8RTOS.
+************************************************************************************/
+
+///////////////////////////////////INCLUDES//////////////////////////////////////////
+#include <stdio.h>      // used for NULL
+#include <stdlib.h>     // used for malloc
+#include "G8RTOS_scheduler.h"
+#include "ClockSys.h"
+#include "msp.h"
+///////////////////////////////END OF INCLUDES///////////////////////////////////////
+
+////////////////////////////////////DEFINES//////////////////////////////////////////
+#define THREADFREQ      1000        // 1000Hz -> 1ms
+#define THUMBBIT 0x01000000         // used to set Thumb mode in PSR
+
+////////////////////////////////END OF DEFINES///////////////////////////////////////
+
+////////////////////////////////////EXTERNS//////////////////////////////////////////
+
+// REMOVE THIS!!
+extern uint32_t test_counter;
+
+extern void G8RTOS_START();     // exists in G8RTOS_scheduler_asm.s
+extern void G8RTOS_PENDSV_HANDLER();        // exists in G8RTOS_scheduler_asm.s
+extern int32_t G8RTOS_START_CRITICAL_SECTION();        // exists in G8RTOS_critical_section_asm.s
+extern void G8RTOS_END_CRITICAL_SECTION(int32_t primask_status);          // exists in G8RTOS_critical_section_asm.s
+extern uint32_t SystemCoreClock;     // system core clock from system_msp432p4014.c
+
+////////////////////////////////END OF EXTERNS///////////////////////////////////////
+
+//////////////////////////////PUBLIC DATA MEMBERS////////////////////////////////////
+
+uint32_t system_time;       // holds the current time for the whole system
+                            // this is initialized to zero upon calling G8RTOS_init
+
+//////////////////////////END OF PUBLIC DATA MEMBERS/////////////////////////////////
+
+//////////////////////////////PRIVATE DATA MEMBERS///////////////////////////////////
+
+// tcb_list to hold TCBs (only available in this file)
+// tcb_list is initialized in G8RTOS_init
+// tcb_list is a dynamically allocated pointer to a tcb_list_t
+static tcb_list_t *tcb_list;
+
+//////////////////////////END OF PRIVATE DATA MEMBERS////////////////////////////////
+
+/////////////////////////////////PRIVATE FUNCTIONS///////////////////////////////////
+
+/************************************************************************************
+ * Name: G8RTOS_systick_init()
+ * Purpose: To initialize/enable the SysTick system in the MSP432. The SysTick
+ *          interrupt is also enabled and set to the lowest interrupt priority (7)
+ *          The programmer decides period of SysTick underflow, in terms of clock
+ *          cycles. Note: Programmer must be aware of system_clock_frequency and is
+ *          responsible for calculating the correct number of clock cycles.
+ * Input(s): uint32_t clock_cycles
+ * Output: systick_response_code_t response_code
+ ************************************************************************************/
+static int G8RTOS_systick_init(uint32_t clock_cycles)
+{
+    if (clock_cycles <= 0)
+    {
+        return -1;
+    }
+    else
+    {
+        SysTick->CTRL = 0;      // disable the SysTick system
+        SysTick->VAL = 0;       // reset the SysTick counter (CVR)
+        SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk;   // enable the TICK interrupt
+        NVIC_SetPriority(SysTick_IRQn, OSINT_PRIORITY);   // set interrupt priority
+        SysTick->LOAD = clock_cycles - 1;       // load the RVR register
+        SysTick->CTRL |= (SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_ENABLE_Msk);   // system_clock, enable
+    }
+
+    return 0;
+}
+
+/************************************************************************************
+ * Name: G8RTOS_scheduler
+ * Purpose:  Choose the next thread to run. Current scheduling algorithm just chooses
+ *           the next running thread by selecting the currently running thread's
+ *           next pointer. Currently no error-checking is made by G8RTOS_scheduler.
+ * Input(s): N/A
+ * Output: G8RTOS_response_code_t response_code
+ ************************************************************************************/
+G8RTOS_response_code_t G8RTOS_scheduler(void)
+{
+    running_thread_ptr = running_thread_ptr->next;      // round-robin algorithm
+
+    return no_G8RTOS_err;       // return 0
+}
+
+//////////////////////////////END OF PRIVATE FUNCTIONS///////////////////////////////
+
+
+////////////////////////////////PUBLIC FUNCTIONS/////////////////////////////////////
+
+/************************************************************************************
+ * Name: G8RTOS_add_thread
+ * Purpose: Function to potentially add a thread to the scheduler. If a TCB can be
+ *          added, all of the TCB's data members are set up and initialized.
+ *          A void pointer to a task (a function) is passed into G8RTOS_add_thread.
+ *          This pointer will be assigned to the PC of the thread's TCB.
+ *          Note: No error checking is implemented as of now.
+ * Input(s): void (*thread_function)(void)
+ * Output: G8RTOS_response_code_t response_code
+ ************************************************************************************/
+G8RTOS_response_code_t G8RTOS_add_thread(void (*thread_function)(void))
+{
+    int32_t primask_status = G8RTOS_START_CRITICAL_SECTION();    // save current status of PRIMASK
+    // start atomic operations
+    
+    // check if there is any space to add a thread_function
+    if (tcb_list->size >= MAX_THREADS)    // if no space
+    {
+        return max_thread_err;   // no_thread_space_err = -3
+    }
+    
+    // otherwise, create new TCB
+    // new thread will be added to the end of the tcb_list
+    tcb_t *new_thread;
+
+    // try to allocate memory for new TCB structure
+    new_thread = malloc(sizeof(tcb_t));
+
+    if (new_thread == NULL)
+        return mem_space_err;    // mem_space_err = -2
+
+    // try to allocate memory for TCB stack
+    new_thread->sp = malloc(STACKSIZE * sizeof(int32_t));
+
+    if ((new_thread->sp) == NULL)
+    {
+        free(new_thread);        // free up memory taken up by TCB structure
+        return mem_space_err;    // mem_space_err = -2
+    }
+    
+    // if here, memory was sucessfully allocated
+    // continue creating new thread
+    // create task's stack
+    // from first pushed to last pushed (to the BOTTOM of the stack):
+    // PSR (include THUMBBIT), PC, LR, R12, R3-R0, R11-R4
+    (new_thread->sp)[STACKSIZE-1] = THUMBBIT;   // save THUMBBIT within PSR
+    (new_thread->sp)[STACKSIZE-2] = (int32_t)(thread_function);   // point PC to thread's function
+    (new_thread->sp)[STACKSIZE-3] = 0x14141414;     // default, not-used value for initial LR
+    (new_thread->sp)[STACKSIZE-4]  = 0x12121212;     // default, not-used value for R12
+    (new_thread->sp)[STACKSIZE-5]  = 0x03030303;     // ...
+    (new_thread->sp)[STACKSIZE-6]  = 0x02020202;
+    (new_thread->sp)[STACKSIZE-7]  = 0x01010101;
+    (new_thread->sp)[STACKSIZE-8]  = 0x00000000;
+    (new_thread->sp)[STACKSIZE-9]  = 0x11111111;
+    (new_thread->sp)[STACKSIZE-10] = 0x10101010;
+    (new_thread->sp)[STACKSIZE-11] = 0x09090909;
+    (new_thread->sp)[STACKSIZE-12] = 0x08080808;
+    (new_thread->sp)[STACKSIZE-13] = 0x07070707;
+    (new_thread->sp)[STACKSIZE-14] = 0x06060606;
+    (new_thread->sp)[STACKSIZE-15] = 0x05050505;
+    (new_thread->sp)[STACKSIZE-16] = 0x04040404;
+    
+    // point sp to top of newly created stack
+    (new_thread->sp) = &((new_thread->sp)[STACKSIZE-16]);
+    
+    // stack pointer (sp) now points to correct location on pre-defined stack
+    // now add the new TCB to END of the tcb_list
+    
+    // if no elements yet exist in tcb_list
+    if (tcb_list->size == 0)
+    {
+        tcb_list->head = new_thread;
+        tcb_list->tail = new_thread;
+        
+        // new_thread is at end of list (point it's "next" to head of list)
+        new_thread->next = tcb_list->head;
+        new_thread->prev = tcb_list->head;
+    }
+    else    // if other elements exist in tcb_list
+    {
+        new_thread->prev = tcb_list->tail;
+        new_thread->next = tcb_list->head;
+        tcb_list->head->prev = new_thread;
+        tcb_list->tail->next = new_thread;
+        tcb_list->tail = new_thread;    // add new_thread to end of tcb_list
+    }
+    
+    (tcb_list->size)++;              // thread size increase by one
+    
+    G8RTOS_END_CRITICAL_SECTION(primask_status);   // restore previous status of PRIMASK
+    // end atomic operations
+    
+    return no_G8RTOS_err;           // return 0
+    
+}
+
+
+/************************************************************************************
+* Name: G8RTOS_init
+* Purpose: Initializes necessary variables and hardware for G8RTOS.
+* Input(s): N/A
+* Output: G8RTOS_response_code_t response_code
+************************************************************************************/
+G8RTOS_response_code_t G8RTOS_init(void)
+{
+    WDT_A->CTL = WDT_A_CTL_PW | WDT_A_CTL_HOLD;		// stop watchdog timer
+                                                    // necessary for MSP432
+    
+    // disable interrupts until OS is started (see G8RTOS_START)
+    // no need to save previous PRIMASK
+    G8RTOS_START_CRITICAL_SECTION();
+    
+    // set system clock to run at 48MHz
+    ClockSys_SetMaxFreq();
+    
+    // initialize system time
+    system_time = 0;
+    
+    // try to allocate space for tcb_list
+    tcb_list = malloc(sizeof(tcb_list_t));
+
+    if (tcb_list == NULL)
+        return mem_space_err;        // return -2
+    
+    // otherwise, space was allocated
+    
+    // initialize tcb_list
+    tcb_list->size = 0;
+    tcb_list->head = NULL;
+    tcb_list->tail = NULL;
+    
+    // initialize hardware (not yet in Lab 2)
+    
+    
+    return no_G8RTOS_err;       // return 0
+    
+}
+
+/************************************************************************************
+* Name: G8RTOS_launch
+* Purpose: Launch the G8RTOS system. The SysTick system is configured, and the
+*          context is set to the first thread. If there are no active threads,
+ *         function returns missing_thread_err (-4).
+* Input(s): N/A
+* Output: G8RTOS_response_code_t response_code
+************************************************************************************/
+G8RTOS_response_code_t G8RTOS_launch(void)
+{
+    // check if there are active threads
+    if (tcb_list->size == 0)            // if no active threads
+        return missing_thread_err;      // return -4
+    
+    // initialize SysTick system timer and its interrupt to the lowest priority (7)
+    // the period of underflow is configured for 1 ms
+    G8RTOS_systick_init((ClockSys_GetSysFreq() / THREADFREQ));
+    
+    // set running_thread_ptr to first thread in tcb_list
+    // G8RTOS_start references running_thread_ptr
+    running_thread_ptr = tcb_list->head;
+    
+    G8RTOS_START();     // set context to first thread in tcb_list
+                        // interrupts are enabled after context is set
+    
+    return no_G8RTOS_err;       // return 0
+}
+
+/////////////////////////////END OF PUBLIC FUNCTIONS/////////////////////////////////
+
+
+////////////////////////////INTERRUPT SERVICE ROUTINES///////////////////////////////
+// every 1 ms
+void SysTick_Handler()
+{
+    system_time++;      // increment system time every 1ms
+    G8RTOS_PENDSV_HANDLER();        // switch thread contexts
+}
+////////////////////////END OF INTERRUPT SERVICE ROUTINES////////////////////////////
+
+/////////////////////////////END OF G8RTOS_scheduler.c///////////////////////////////

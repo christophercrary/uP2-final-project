@@ -1,0 +1,61 @@
+/************************************************************************************
+ *  File name: G8RTOS_structures.h
+ *  Modified: 10 September 2017
+ *  Author:  Christopher Crary
+ *  Purpose: To define useful structures used in the G8RTOS.
+************************************************************************************/
+
+///////////////////////////////////INCLUDES//////////////////////////////////////////
+#include "msp.h"
+///////////////////////////////END OF INCLUDES///////////////////////////////////////
+
+////////////////////////////////////DEFINES//////////////////////////////////////////
+//header guard
+#ifndef G8RTOS_STRUCTURES_H_
+#define G8RTOS_STRUCTURES_H_
+////////////////////////////////END OF DEFINES///////////////////////////////////////
+
+////////////////////////////////////EXTERNS//////////////////////////////////////////
+////////////////////////////////END OF EXTERNS///////////////////////////////////////
+
+//////////////////////////////PUBLIC DATA MEMBERS////////////////////////////////////
+
+// G8RTOS error code enumerations
+typedef enum { missing_thread_err = -4,     // no active thread
+    max_thread_err = -3,         // more than MAX_THREADS active threads
+    mem_space_err = -2,          // not enough free memory space
+    G8RTOS_err = -1,             // general error
+    no_G8RTOS_err = 0            // no error
+}G8RTOS_response_code_t;
+
+// Thread Control Block structure (Lab 2)
+typedef struct tcb {
+    int32_t *sp;    // thread stack Pointer
+    struct tcb *next;    // pointer to next thread in tcb list
+    struct tcb *prev;    // pointer to previous thread in tcb list
+}tcb_t;
+
+// Thread Control Block List (circular, doubly-linked)
+typedef struct tcb_list {
+    uint8_t size;    // counter of how many TCBs are in list
+    tcb_t *head;    // head of the TCB list
+    tcb_t *tail;    // tail of the TCB list
+}tcb_list_t;
+
+
+tcb_t *running_thread_ptr;    // pointer to currently running thread TCB
+
+//////////////////////////END OF PUBLIC DATA MEMBERS/////////////////////////////////
+
+//////////////////////////////PRIVATE DATA MEMBERS///////////////////////////////////
+//////////////////////////END OF PRIVATE DATA MEMBERS////////////////////////////////
+
+////////////////////////////////INLINE FUNCTIONS/////////////////////////////////////
+////////////////////////////END OF INLINE FUNCTIONS//////////////////////////////////
+
+////////////////////////////PUBLIC FUNCTION PROTOTYPES///////////////////////////////
+//////////////////////////END OF PUBLIC FUNCTION PROTOTYPES//////////////////////////
+
+#endif		// end of header guard
+
+//////////////////////////////END OF G8RTOS_structures.h/////////////////////////////
