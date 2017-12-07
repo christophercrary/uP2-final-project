@@ -24,7 +24,7 @@ void BSP_InitBoard()
 	ClockSys_SetMaxFreq();
 
 	/* Init i2c */
-	initI2C();
+	//initI2C();
 
 	/* Init Opt3001 */
 	//sensorOpt3001Enable(true);
@@ -45,7 +45,7 @@ void BSP_InitBoard()
 	//BackChannelInit();
 
 	/* Init RGB LEDs on daughter board */
-	leds_init();
+	//leds_init();
 
 	/* Initialize LCD */
 	LCD_Init(true);        // touch-screen interrupt enabled

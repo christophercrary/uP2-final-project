@@ -202,12 +202,21 @@ static uint16_t current_message_index = 0;
 * Input(s): Point cursor, uint8_t character
 * Output: N/A
 ************************************************************************************/
-static inline void insert_character(Point *cursor, uint8_t character)
+static inline void insert_character(uint8_t character)
 {
     // IMPLEMENT: insert semaphore for cursor
 
-    LCD_PutChar(cursor->x, cursor->y, character, LCD_TEXT_COLOR);
-    cursor->x += LCD_TEXT_WIDTH;
+    if ((cursor.x < COMPOSE_MESSAGE_CURSOR_X_MAX) &&
+        (cursor.y < COMPOSE_MESSAGE_CURSOR_Y_MAX))
+    {
+        // the only way to successfully write back a character after deleting a character
+        // fucking beats Brit and I (QUESTION)
+        LCD_DrawRectangle(cursor.x, (cursor.x + LCD_TEXT_WIDTH), cursor.y,
+                         (cursor.y + LCD_TEXT_HEIGHT), LCD_WHITE);
+
+        LCD_PutChar(cursor.x, cursor.y, character, LCD_TEXT_COLOR);
+        cursor.x += LCD_TEXT_WIDTH;
+    }
 
     return;
 }
@@ -218,15 +227,21 @@ static inline void insert_character(Point *cursor, uint8_t character)
 * Input(s): Point cursor
 * Output: N/A
 ************************************************************************************/
-static inline void delete_character(Point *cursor)
+static inline void delete_character()
 {
-    // IMPLEMENT: insert semaphore for cursor
+    // IMPLEMENT: insert semaphore for cursor (for blinking)
 
+    // check bounds for cursor
+    if ((cursor.x > COMPOSE_MESSAGE_CURSOR_X_MIN) &&
+        (cursor.y >= COMPOSE_MESSAGE_CURSOR_Y_MIN))
+    {
     // erase previous character from text arena
-    // QUESTION: SHOULD THERE BE DIFFERENT TEXT ARENAS?
-    LCD_DrawRectangle(cursor->x - LCD_TEXT_WIDTH, cursor->x, cursor->y,
-                      cursor->y + LCD_TEXT_HEIGHT, COMPOSE_MESSAGE_TEXT_ARENA_COLOR);
-    cursor->x -= LCD_TEXT_WIDTH;
+    LCD_DrawRectangle((cursor.x - LCD_TEXT_WIDTH), cursor.x, cursor.y,
+                      (cursor.y + LCD_TEXT_HEIGHT), LCD_WHITE);
+
+    cursor.x -= LCD_TEXT_WIDTH;
+    }
+
 
     return;
 }
@@ -327,8 +342,8 @@ void thread_mumessage_compose_message(void)
                            (sizeof(text_keyboard1)/sizeof(text_keyboard1[0])));
 
     // initialize the global cursor to the beginning of the text arena
-    cursor.x = TEXT_ARENA_X_MIN + 5;
-    cursor.y = TEXT_ARENA_Y_MIN;
+    cursor.x = COMPOSE_MESSAGE_CURSOR_X_MIN;
+    cursor.y = COMPOSE_MESSAGE_CURSOR_Y_MIN;
 
     /* add the necessary aperiodic thread for touches made to the LCD TouchPanel */
     G8RTOS_add_aperiodic_thread(aperiodic_mumessage_compose_message, PORT4_IRQn, 6);
@@ -367,11 +382,11 @@ void thread_mumessage_compose_message_check_TP(void)
     {
         if (index == 27)
         {
-            delete_character(&cursor);
+            delete_character();
         }
         else
         {
-        insert_character(&cursor, keyboard1_keys[index]);
+            insert_character(keyboard1_keys[index]);
         }
     }
 

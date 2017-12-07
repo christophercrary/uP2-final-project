@@ -30,6 +30,11 @@
 #define CURSOR_HEIGHT       16
 #define CURSOR_COLOR        LCD_BLACK
 
+#define COMPOSE_MESSAGE_CURSOR_X_MIN  5
+#define COMPOSE_MESSAGE_CURSOR_X_MAX  317
+#define COMPOSE_MESSAGE_CURSOR_Y_MIN  TEXT_ARENA_Y_MIN
+#define COMPOSE_MESSAGE_CURSOR_Y_MAX  37
+
 /************************** COMPOSE MESSAGE DEFINES ********************************/
 
 /* defined color palette */
