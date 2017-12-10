@@ -10,6 +10,7 @@
 #include "G8RTOS.h"
 #include "LCD.h"     // QUESTION: what is the best way to include LCD.h?
 #include "GPIO.h"    // QUESTION: what is the best way to include GPIO.h?
+#include "time.h"   // REMOVE
 
 /////////////////////////////END OF DEPENDENCIES/////////////////////////////////////
 
@@ -34,6 +35,7 @@ extern semaphore_t semaphore_CC3100;          // used to access CC3100 WiFi chip
 //test (REMOVE)
 Point touch;
 
+
 //////////////////////////END OF PUBLIC DATA MEMBERS/////////////////////////////////
 
 //////////////////////////////PRIVATE DATA MEMBERS///////////////////////////////////
@@ -44,7 +46,7 @@ Point touch;
  * to the LCD TouchPanel */
 
 // compose message background section
-static Rectangle section_compose_message_background[] =
+const static Rectangle section_compose_message_background[] =
 {
     {COMPOSE_MESSAGE_BACKGROUND_X_MIN, COMPOSE_MESSAGE_BACKGROUND_X_MAX,
      COMPOSE_MESSAGE_BACKGROUND_Y_MIN, COMPOSE_MESSAGE_BACKGROUND_Y_MAX,
@@ -52,7 +54,7 @@ static Rectangle section_compose_message_background[] =
 };
 
 // compose message header bar
-static Rectangle section_compose_message_header[] =
+const static Rectangle section_compose_message_header[] =
 {
     {COMPOSE_MESSAGE_HEADER_X_MIN, COMPOSE_MESSAGE_HEADER_X_MAX,
      COMPOSE_MESSAGE_HEADER_Y_MIN, COMPOSE_MESSAGE_HEADER_Y_MAX,
@@ -63,7 +65,7 @@ static Rectangle section_compose_message_header[] =
 };
 
 // compose message header bar buttons (back/send)
-static Rectangle section_compose_message_header_buttons[] =
+const static Rectangle section_compose_message_header_buttons[] =
 {
      {COMPOSE_MESSAGE_BACK_BUTTON_X_MIN, COMPOSE_MESSAGE_BACK_BUTTON_X_MAX,
       COMPOSE_MESSAGE_BACK_BUTTON_Y_MIN, COMPOSE_MESSAGE_BACK_BUTTON_Y_MAX,
@@ -74,7 +76,7 @@ static Rectangle section_compose_message_header_buttons[] =
 };
 
 // compose message header buttons text
-static Text text_section_compose_message_header[] =
+const static Text text_section_compose_message_header[] =
 {
      {COMPOSE_MESSAGE_BACK_BUTTON_TEXT_X_START, COMPOSE_MESSAGE_BACK_BUTTON_TEXT_Y_START,
       "< BACK", COMPOSE_MESSAGE_BACK_BUTTON_TEXT_COLOR},
@@ -83,13 +85,13 @@ static Text text_section_compose_message_header[] =
 };
 
 // text arena background section
-static Rectangle section_text_arena[] =
+const static Rectangle section_text_arena[] =
 {
      {TEXT_ARENA_X_MIN, TEXT_ARENA_X_MAX, TEXT_ARENA_Y_MIN, TEXT_ARENA_Y_MAX, COMPOSE_MESSAGE_TEXT_ARENA_COLOR}
 };
 
 // keyboard background section
-static Rectangle section_keyboard_background[] =
+const static Rectangle section_keyboard_background[] =
 {
     {KEYBOARD_DIVIDER_X_MIN, KEYBOARD_DIVIDER_X_MAX,
      KEYBOARD_DIVIDER_Y_MIN, KEYBOARD_DIVIDER_Y_MAX,
@@ -98,7 +100,7 @@ static Rectangle section_keyboard_background[] =
 };
 
 // keyboard #1 (no click) (lower-case keyboard)
-static Rectangle section_keyboard1_no_click[] =
+const static Rectangle section_keyboard1_no_click[] =
 {
      {LOWERCASE_Q_BUTTON_X_MIN, LOWERCASE_Q_BUTTON_X_MAX, LOWERCASE_Q_BUTTON_Y_MIN, LOWERCASE_Q_BUTTON_Y_MAX, KEYBOARD_KEY_NO_CLICK_COLOR},                                        // row 1 of 4
      {LOWERCASE_W_BUTTON_X_MIN, LOWERCASE_W_BUTTON_X_MAX, LOWERCASE_W_BUTTON_Y_MIN, LOWERCASE_W_BUTTON_Y_MAX, KEYBOARD_KEY_NO_CLICK_COLOR},
@@ -139,7 +141,7 @@ static Rectangle section_keyboard1_no_click[] =
 };
 
 // keyboard #1 (no click) text
-static Text text_section_keyboard1_no_click[] =
+const static Text text_section_keyboard1_no_click[] =
 {
      {LOWERCASE_Q_BUTTON_TEXT_X_START, LOWERCASE_Q_BUTTON_TEXT_Y_START, "q", KEYBOARD_KEY_TEXT_NO_CLICK_COLOR},                                        // row 1 of 4
      {LOWERCASE_W_BUTTON_TEXT_X_START, LOWERCASE_W_BUTTON_TEXT_Y_START, "w", KEYBOARD_KEY_TEXT_NO_CLICK_COLOR},
@@ -175,7 +177,7 @@ static Text text_section_keyboard1_no_click[] =
 };
 
 // keyboard #1 (click) (lower-case keyboard)
-static Rectangle section_keyboard1_click[] =
+const static Rectangle section_keyboard1_click[] =
 {
      {LOWERCASE_Q_BUTTON_X_MIN, LOWERCASE_Q_BUTTON_X_MAX, LOWERCASE_Q_BUTTON_Y_MIN, LOWERCASE_Q_BUTTON_Y_MAX, KEYBOARD_KEY_CLICK_COLOR},                                        // row 1 of 4
      {LOWERCASE_W_BUTTON_X_MIN, LOWERCASE_W_BUTTON_X_MAX, LOWERCASE_W_BUTTON_Y_MIN, LOWERCASE_W_BUTTON_Y_MAX, KEYBOARD_KEY_CLICK_COLOR},
@@ -216,7 +218,7 @@ static Rectangle section_keyboard1_click[] =
 };
 
 // keyboard #1 text
-static Text text_section_keyboard1_click[] =
+const static Text text_section_keyboard1_click[] =
 {
      {LOWERCASE_Q_BUTTON_TEXT_X_START, LOWERCASE_Q_BUTTON_TEXT_Y_START, "q", KEYBOARD_KEY_TEXT_CLICK_COLOR},                                        // row 1 of 4
      {LOWERCASE_W_BUTTON_TEXT_X_START, LOWERCASE_W_BUTTON_TEXT_Y_START, "w", KEYBOARD_KEY_TEXT_CLICK_COLOR},
@@ -253,7 +255,7 @@ static Text text_section_keyboard1_click[] =
 
 
 // keyboard #2 (no click) (upper-case keyboard)
-static Rectangle section_keyboard2_no_click[] =
+const static Rectangle section_keyboard2_no_click[] =
 {
      {UPPERCASE_Q_BUTTON_X_MIN, UPPERCASE_Q_BUTTON_X_MAX, UPPERCASE_Q_BUTTON_Y_MIN, UPPERCASE_Q_BUTTON_Y_MAX, KEYBOARD_KEY_NO_CLICK_COLOR},                                        // row 1 of 4
      {UPPERCASE_W_BUTTON_X_MIN, UPPERCASE_W_BUTTON_X_MAX, UPPERCASE_W_BUTTON_Y_MIN, UPPERCASE_W_BUTTON_Y_MAX, KEYBOARD_KEY_NO_CLICK_COLOR},
@@ -294,7 +296,7 @@ static Rectangle section_keyboard2_no_click[] =
 };
 
 // keyboard #2 (no click) text
-static Text text_section_keyboard2_no_click[] =
+const static Text text_section_keyboard2_no_click[] =
 {
      {UPPERCASE_Q_BUTTON_TEXT_X_START, UPPERCASE_Q_BUTTON_TEXT_Y_START, "Q", KEYBOARD_KEY_TEXT_NO_CLICK_COLOR},                                        // row 1 of 4
      {UPPERCASE_W_BUTTON_TEXT_X_START, UPPERCASE_W_BUTTON_TEXT_Y_START, "W", KEYBOARD_KEY_TEXT_NO_CLICK_COLOR},
@@ -330,7 +332,7 @@ static Text text_section_keyboard2_no_click[] =
 };
 
 // keyboard #2 (click) (upper-case keyboard)
-static Rectangle section_keyboard2_click[] =
+const static Rectangle section_keyboard2_click[] =
 {
      {UPPERCASE_Q_BUTTON_X_MIN, UPPERCASE_Q_BUTTON_X_MAX, UPPERCASE_Q_BUTTON_Y_MIN, UPPERCASE_Q_BUTTON_Y_MAX, KEYBOARD_KEY_CLICK_COLOR},                                        // row 1 of 4
      {UPPERCASE_W_BUTTON_X_MIN, UPPERCASE_W_BUTTON_X_MAX, UPPERCASE_W_BUTTON_Y_MIN, UPPERCASE_W_BUTTON_Y_MAX, KEYBOARD_KEY_CLICK_COLOR},
@@ -371,7 +373,7 @@ static Rectangle section_keyboard2_click[] =
 };
 
 // keyboard #2 (click) text
-static Text text_section_keyboard2_click[] =
+const static Text text_section_keyboard2_click[] =
 {
      {UPPERCASE_Q_BUTTON_TEXT_X_START, UPPERCASE_Q_BUTTON_TEXT_Y_START, "Q", KEYBOARD_KEY_TEXT_CLICK_COLOR},                                        // row 1 of 4
      {UPPERCASE_W_BUTTON_TEXT_X_START, UPPERCASE_W_BUTTON_TEXT_Y_START, "W", KEYBOARD_KEY_TEXT_CLICK_COLOR},
@@ -407,7 +409,7 @@ static Text text_section_keyboard2_click[] =
 };
 
 // keyboard #3 (no click)
-static Rectangle section_keyboard3_no_click[] =
+const static Rectangle section_keyboard3_no_click[] =
 {
      {NUM_1_BUTTON_X_MIN, NUM_1_BUTTON_X_MAX, NUM_1_BUTTON_Y_MIN, NUM_1_BUTTON_Y_MAX, KEYBOARD_KEY_NO_CLICK_COLOR},                               // row 1 of 4
      {NUM_2_BUTTON_X_MIN, NUM_2_BUTTON_X_MAX, NUM_2_BUTTON_Y_MIN, NUM_2_BUTTON_Y_MAX, KEYBOARD_KEY_NO_CLICK_COLOR},
@@ -443,7 +445,7 @@ static Rectangle section_keyboard3_no_click[] =
 };
 
 // keyboard #3 (click)
-static Rectangle section_keyboard3_click[] =
+const static Rectangle section_keyboard3_click[] =
 {
      {NUM_1_BUTTON_X_MIN, NUM_1_BUTTON_X_MAX, NUM_1_BUTTON_Y_MIN, NUM_1_BUTTON_Y_MAX, KEYBOARD_KEY_CLICK_COLOR},                            // row 1 of 4
      {NUM_2_BUTTON_X_MIN, NUM_2_BUTTON_X_MAX, NUM_2_BUTTON_Y_MIN, NUM_2_BUTTON_Y_MAX, KEYBOARD_KEY_CLICK_COLOR},
@@ -471,7 +473,7 @@ static Rectangle section_keyboard3_click[] =
      {KEYBOARD3_QUESTION_MARK_BUTTON_X_MIN, KEYBOARD3_QUESTION_MARK_BUTTON_X_MAX, KEYBOARD3_QUESTION_MARK_BUTTON_Y_MIN, KEYBOARD3_QUESTION_MARK_BUTTON_Y_MAX, KEYBOARD_KEY_CLICK_COLOR},
      {KEYBOARD3_EXCLAMATION_MARK_BUTTON_X_MIN, KEYBOARD3_EXCLAMATION_MARK_BUTTON_X_MAX, KEYBOARD3_EXCLAMATION_MARK_BUTTON_Y_MIN, KEYBOARD3_EXCLAMATION_MARK_BUTTON_Y_MAX, KEYBOARD_KEY_CLICK_COLOR},
      {KEYBOARD3_SINGLE_QUOTE_BUTTON_X_MIN, KEYBOARD3_SINGLE_QUOTE_BUTTON_X_MAX, KEYBOARD3_SINGLE_QUOTE_BUTTON_Y_MIN, KEYBOARD3_SINGLE_QUOTE_BUTTON_Y_MAX, KEYBOARD_KEY_CLICK_COLOR},
-     {KEYBOARD3_BACKSPACE_BUTTON_X_MIN, KEYBOARD3_BACKSPACE_BUTTON_X_MAX, KEYBOARD3_BACKSPACE_BUTTON_Y_MIN, KEYBOARD3_BACKSPACE_BUTTON_Y_MAX, KEYBOARD_KEY_CLICK_COLOR},
+     {KEYBOARD3_BACKSPACE_BUTTON_X_MIN, KEYBOARD3_BACKSPACE_BUTTON_X_MAX, KEYBOARD3_BACKSPACE_BUTTON_Y_MIN, KEYBOARD3_BACKSPACE_BUTTON_Y_MAX, COMPOSE_MESSAGE_BACKSPACE_BUTTON_CLICK_COLOR},
      {KEYBOARD3_CHANGE_TO_ALPHABET_KEYBOARD_BUTTON_X_MIN, KEYBOARD3_CHANGE_TO_ALPHABET_KEYBOARD_BUTTON_X_MAX, KEYBOARD3_CHANGE_TO_ALPHABET_KEYBOARD_BUTTON_Y_MIN,         // row 4 of 4
       KEYBOARD3_CHANGE_TO_ALPHABET_KEYBOARD_BUTTON_Y_MAX, KEYBOARD_KEY_CLICK_COLOR},
      {KEYBOARD3_SPACE_BUTTON_X_MIN, KEYBOARD3_SPACE_BUTTON_X_MAX, KEYBOARD3_SPACE_BUTTON_Y_MIN, KEYBOARD3_SPACE_BUTTON_Y_MAX, KEYBOARD_KEY_CLICK_COLOR},
@@ -479,7 +481,7 @@ static Rectangle section_keyboard3_click[] =
 };
 
 // keyboard #3 (no click) text
-static Text text_section_keyboard3_no_click[] =
+const static Text text_section_keyboard3_no_click[] =
 {
      {NUM_1_BUTTON_TEXT_X_START, NUM_1_BUTTON_TEXT_Y_START, "1", KEYBOARD_KEY_TEXT_NO_CLICK_COLOR},                                                           // row 1 of 4
      {NUM_2_BUTTON_TEXT_X_START, NUM_2_BUTTON_TEXT_Y_START, "2", KEYBOARD_KEY_TEXT_NO_CLICK_COLOR},
@@ -515,7 +517,7 @@ static Text text_section_keyboard3_no_click[] =
 
 
 // keyboard #3 (click) text
-static Text text_section_keyboard3_click[] =
+const static Text text_section_keyboard3_click[] =
 {
      {NUM_1_BUTTON_TEXT_X_START, NUM_1_BUTTON_TEXT_Y_START, "1", KEYBOARD_KEY_TEXT_CLICK_COLOR},                                                      // row 1 of 4
      {NUM_2_BUTTON_TEXT_X_START, NUM_2_BUTTON_TEXT_Y_START, "2", KEYBOARD_KEY_TEXT_CLICK_COLOR},
@@ -543,7 +545,7 @@ static Text text_section_keyboard3_click[] =
      {KEYBOARD3_QUESTION_MARK_BUTTON_TEXT_X_START, KEYBOARD3_QUESTION_MARK_BUTTON_TEXT_Y_START, "?", KEYBOARD_KEY_TEXT_CLICK_COLOR},
      {KEYBOARD3_EXCLAMATION_MARK_BUTTON_TEXT_X_START, KEYBOARD3_EXCLAMATION_MARK_BUTTON_TEXT_Y_START, "!", KEYBOARD_KEY_TEXT_CLICK_COLOR},
      {KEYBOARD3_SINGLE_QUOTE_BUTTON_TEXT_X_START, KEYBOARD3_SINGLE_QUOTE_BUTTON_TEXT_Y_START, "'", KEYBOARD_KEY_TEXT_CLICK_COLOR},
-     {KEYBOARD3_BACKSPACE_BUTTON_TEXT_X_START, KEYBOARD3_BACKSPACE_BUTTON_TEXT_Y_START, "<X", KEYBOARD_KEY_TEXT_CLICK_COLOR},
+     {KEYBOARD3_BACKSPACE_BUTTON_TEXT_X_START, KEYBOARD3_BACKSPACE_BUTTON_TEXT_Y_START, "<X", COMPOSE_MESSAGE_BACKSPACE_BUTTON_TEXT_CLICK_COLOR},
      {KEYBOARD3_CHANGE_TO_ALPHABET_KEYBOARD_BUTTON_TEXT_X_START, KEYBOARD3_CHANGE_TO_ALPHABET_KEYBOARD_BUTTON_TEXT_Y_START, "ABC", KEYBOARD_KEY_TEXT_CLICK_COLOR},                    // row 4 of 4
      {KEYBOARD3_SPACE_BUTTON_TEXT_X_START, KEYBOARD3_SPACE_BUTTON_TEXT_Y_START, "SPACE", KEYBOARD_KEY_TEXT_CLICK_COLOR},
      {KEYBOARD3_RETURN_BUTTON_TEXT_X_START, KEYBOARD3_RETURN_BUTTON_TEXT_Y_START, "RETURN", KEYBOARD_KEY_TEXT_CLICK_COLOR}
@@ -551,7 +553,7 @@ static Text text_section_keyboard3_click[] =
 
 
 // keyboard #4 (no click)
-static Rectangle section_keyboard4_no_click[] =
+const static Rectangle section_keyboard4_no_click[] =
 {
      {OPENING_BRACKET_SYMBOL_BUTTON_X_MIN, OPENING_BRACKET_SYMBOL_BUTTON_X_MAX, OPENING_BRACKET_SYMBOL_BUTTON_Y_MIN, OPENING_BRACKET_SYMBOL_BUTTON_Y_MAX, KEYBOARD_KEY_NO_CLICK_COLOR},                               // row 1 of 4
      {CLOSING_BRACKET_SYMBOL_BUTTON_X_MIN, CLOSING_BRACKET_SYMBOL_BUTTON_X_MAX, CLOSING_BRACKET_SYMBOL_BUTTON_Y_MIN, CLOSING_BRACKET_SYMBOL_BUTTON_Y_MAX, KEYBOARD_KEY_NO_CLICK_COLOR},
@@ -587,7 +589,7 @@ static Rectangle section_keyboard4_no_click[] =
 };
 
 // keyboard #4 (click)
-static Rectangle section_keyboard4_click[] =
+const static Rectangle section_keyboard4_click[] =
 {
     {OPENING_BRACKET_SYMBOL_BUTTON_X_MIN, OPENING_BRACKET_SYMBOL_BUTTON_X_MAX, OPENING_BRACKET_SYMBOL_BUTTON_Y_MIN, OPENING_BRACKET_SYMBOL_BUTTON_Y_MAX, KEYBOARD_KEY_CLICK_COLOR},                               // row 1 of 4
     {CLOSING_BRACKET_SYMBOL_BUTTON_X_MIN, CLOSING_BRACKET_SYMBOL_BUTTON_X_MAX, CLOSING_BRACKET_SYMBOL_BUTTON_Y_MIN, CLOSING_BRACKET_SYMBOL_BUTTON_Y_MAX, KEYBOARD_KEY_CLICK_COLOR},
@@ -615,7 +617,7 @@ static Rectangle section_keyboard4_click[] =
     {KEYBOARD4_QUESTION_MARK_BUTTON_X_MIN, KEYBOARD4_QUESTION_MARK_BUTTON_X_MAX, KEYBOARD4_QUESTION_MARK_BUTTON_Y_MIN, KEYBOARD4_QUESTION_MARK_BUTTON_Y_MAX, KEYBOARD_KEY_CLICK_COLOR},
     {KEYBOARD4_EXCLAMATION_MARK_BUTTON_X_MIN, KEYBOARD4_EXCLAMATION_MARK_BUTTON_X_MAX, KEYBOARD4_EXCLAMATION_MARK_BUTTON_Y_MIN, KEYBOARD4_EXCLAMATION_MARK_BUTTON_Y_MAX, KEYBOARD_KEY_CLICK_COLOR},
     {KEYBOARD4_SINGLE_QUOTE_BUTTON_X_MIN, KEYBOARD4_SINGLE_QUOTE_BUTTON_X_MAX, KEYBOARD4_SINGLE_QUOTE_BUTTON_Y_MIN, KEYBOARD4_SINGLE_QUOTE_BUTTON_Y_MAX, KEYBOARD_KEY_CLICK_COLOR},
-    {KEYBOARD3_BACKSPACE_BUTTON_X_MIN, KEYBOARD3_BACKSPACE_BUTTON_X_MAX, KEYBOARD3_BACKSPACE_BUTTON_Y_MIN, KEYBOARD3_BACKSPACE_BUTTON_Y_MAX, KEYBOARD_KEY_CLICK_COLOR},
+    {KEYBOARD3_BACKSPACE_BUTTON_X_MIN, KEYBOARD3_BACKSPACE_BUTTON_X_MAX, KEYBOARD3_BACKSPACE_BUTTON_Y_MIN, KEYBOARD3_BACKSPACE_BUTTON_Y_MAX, COMPOSE_MESSAGE_BACKSPACE_BUTTON_CLICK_COLOR},
     {KEYBOARD4_CHANGE_TO_ALPHABET_KEYBOARD_BUTTON_X_MIN, KEYBOARD4_CHANGE_TO_ALPHABET_KEYBOARD_BUTTON_X_MAX, KEYBOARD4_CHANGE_TO_ALPHABET_KEYBOARD_BUTTON_Y_MIN,         // row 4 of 4
      KEYBOARD4_CHANGE_TO_ALPHABET_KEYBOARD_BUTTON_Y_MAX, KEYBOARD_KEY_CLICK_COLOR},
     {KEYBOARD4_SPACE_BUTTON_X_MIN, KEYBOARD4_SPACE_BUTTON_X_MAX, KEYBOARD4_SPACE_BUTTON_Y_MIN, KEYBOARD4_SPACE_BUTTON_Y_MAX, KEYBOARD_KEY_CLICK_COLOR},
@@ -623,7 +625,7 @@ static Rectangle section_keyboard4_click[] =
 };
 
 // keyboard #4 (no click) text
-static Text text_section_keyboard4_no_click[] =
+const static Text text_section_keyboard4_no_click[] =
 {
     {OPENING_BRACKET_SYMBOL_BUTTON_TEXT_X_START, OPENING_BRACKET_SYMBOL_BUTTON_TEXT_Y_START, "[", KEYBOARD_KEY_TEXT_NO_CLICK_COLOR},                               // row 1 of 4
     {CLOSING_BRACKET_SYMBOL_BUTTON_TEXT_X_START, CLOSING_BRACKET_SYMBOL_BUTTON_TEXT_Y_START, "]", KEYBOARD_KEY_TEXT_NO_CLICK_COLOR},
@@ -659,7 +661,7 @@ static Text text_section_keyboard4_no_click[] =
 
 
 // keyboard #4 (click) text
-static Text text_section_keyboard4_click[] =
+const static Text text_section_keyboard4_click[] =
 {
     {OPENING_BRACKET_SYMBOL_BUTTON_TEXT_X_START, OPENING_BRACKET_SYMBOL_BUTTON_TEXT_Y_START, "[", KEYBOARD_KEY_TEXT_CLICK_COLOR},                               // row 1 of 4
     {CLOSING_BRACKET_SYMBOL_BUTTON_TEXT_X_START, CLOSING_BRACKET_SYMBOL_BUTTON_TEXT_Y_START, "]", KEYBOARD_KEY_TEXT_CLICK_COLOR},
@@ -687,7 +689,7 @@ static Text text_section_keyboard4_click[] =
     {KEYBOARD4_QUESTION_MARK_BUTTON_TEXT_X_START, KEYBOARD4_QUESTION_MARK_BUTTON_TEXT_Y_START, "?", KEYBOARD_KEY_TEXT_CLICK_COLOR},
     {KEYBOARD4_EXCLAMATION_MARK_BUTTON_TEXT_X_START, KEYBOARD4_EXCLAMATION_MARK_BUTTON_TEXT_Y_START, "!", KEYBOARD_KEY_TEXT_CLICK_COLOR},
     {KEYBOARD4_SINGLE_QUOTE_BUTTON_TEXT_X_START, KEYBOARD4_SINGLE_QUOTE_BUTTON_TEXT_Y_START, "'", KEYBOARD_KEY_TEXT_CLICK_COLOR},
-    {KEYBOARD4_BACKSPACE_BUTTON_TEXT_X_START, KEYBOARD4_BACKSPACE_BUTTON_TEXT_Y_START, "<X", KEYBOARD_KEY_TEXT_CLICK_COLOR},
+    {KEYBOARD4_BACKSPACE_BUTTON_TEXT_X_START, KEYBOARD4_BACKSPACE_BUTTON_TEXT_Y_START, "<X", COMPOSE_MESSAGE_BACKSPACE_BUTTON_TEXT_CLICK_COLOR},
     {KEYBOARD4_CHANGE_TO_ALPHABET_KEYBOARD_BUTTON_TEXT_X_START, KEYBOARD4_CHANGE_TO_ALPHABET_KEYBOARD_BUTTON_TEXT_Y_START, "ABC", KEYBOARD_KEY_TEXT_CLICK_COLOR},                    // row 4 of 4
     {KEYBOARD4_SPACE_BUTTON_TEXT_X_START, KEYBOARD4_SPACE_BUTTON_TEXT_Y_START, "SPACE", KEYBOARD_KEY_TEXT_CLICK_COLOR},
     {KEYBOARD4_RETURN_BUTTON_TEXT_X_START, KEYBOARD4_RETURN_BUTTON_TEXT_Y_START, "RETURN", KEYBOARD_KEY_TEXT_CLICK_COLOR}
@@ -701,7 +703,7 @@ static Text text_section_keyboard4_click[] =
 // NOTE: '1' is a filler used to determine when to change keyboard to numbers/symbols keyboard
 // NOTE: ' ' is a filler used to determine when to add a space to the messgge
 // NOTE: '|' is a filler used to determine when to create a new line
-static char keyboard1_keys[31] =
+const static char keyboard1_keys[31] =
 {
  'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p',
    'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l',
@@ -713,7 +715,7 @@ static char keyboard1_keys[31] =
 // NOTE: '@' is a filler used to determine when to change keyboard to alphabet keyboard
 // NOTE: ' ' is a filler used to determine when to add a space to the messgge
 // NOTE: '|' is a filler used to determine when to create a new line
-static char keyboard2_keys[31] =
+const static char keyboard2_keys[31] =
 {
  'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P',
    'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L',
@@ -725,7 +727,7 @@ static char keyboard2_keys[31] =
 // NOTE: 'a' is a filler used to determine when to change keyboard to alphabet keyboard
 // NOTE: ' ' is a filler used to determine when to add a space to the messgge
 // NOTE: '|' is a filler used to determine when to create a new line
-static char keyboard3_keys[30] =
+const static char keyboard3_keys[30] =
 {
  '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
  '-', '/', ':', ';', '(', ')', '$', '&', '@', '\"',
@@ -743,7 +745,7 @@ static char keyboard3_keys[30] =
 // NOTE: 'm' is a filler used to determine when to create a merp face ":/"
 // NOTE: 'r' is a filler used to determine when to create a rawr face "xD"
 // NOTE: 't' is a filler used to determine when to create a tongue-out face ":P"
-static char keyboard4_keys[30] =
+const static char keyboard4_keys[30] =
 {
  '[', ']', '{', '}', '#', '%', '^', '*', '+', '=',
  '_', '|', '<', '>', 'h', 's', 'w', 'm', 'r', 't',
@@ -760,6 +762,9 @@ static uint8_t keyboard;     // 4 possible keyboards (0-3) (IMPLEMENT BITFIELDS)
 // flag used to determine which alphabet keyboard was displayed upon
 // switching to numbers/symbols keyboard
 static uint8_t lowercase_uppercase;     // 2 possible choices (0 for lowercase, 1 for uppercase) (IMPLEMENT BITFIELDS)
+
+// private count of number of unread (new) messages
+static uint16_t unread_message_count;
 
 // array used to store current message being composed
 static uint8_t current_message[512];
@@ -1000,6 +1005,128 @@ void aperiodic_mumessage_compose_message(void)
 
 /******************************* COMMON THREADS ************************************/
 
+/* general threads */
+
+/************************************************************************************
+* Name: thread_mumessage_background_processes
+* Purpose: Thread to initialize MuMessage background processes, including but not
+*          limited to updating the MuPhone header bar with the current amount of
+*          unread messages.
+* Input(s): N/A
+* Output: N/A
+************************************************************************************/
+void thread_mumessage_background_processes(void)
+{
+    /* initialize necessary data members */
+    unread_message_count = 0;
+
+    // local unread message count used to determine if anything needs to be updated
+    uint16_t previous_unread_message_count = 0;
+
+    // local string used to store entire unread message notification
+    char unread_message_notification[16];
+
+    // initialize unread_message_count_str with initial value
+    sprintf(unread_message_notification, "%u New Messages", previous_unread_message_count);
+
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+    char teststring[19];
+
+    sprintf(teststring, "%d-%d-%d %d:%d:%d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+
+    // local Rectangle structure, used to update notifications in header bar (used to wipe previous notification)
+    Rectangle section_unread_message_notification =
+    {
+      .xMin = MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_PANEL_X_MIN, .xMax = MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_PANEL_X_MAX,
+      .yMin = MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_PANEL_Y_MIN, .yMax = MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_PANEL_Y_MAX,
+      .color = MUPHONE_HEADER_BAR_COLOR
+    };
+
+    // local Text structure, used to print notifications in header bar
+    Text text_section_unread_message_notification =
+    {
+     .xStart = MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_TEXT_X_START, .yStart = MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_TEXT_Y_START,
+     .string = unread_message_notification, .color = MUPHONE_HEADER_BAR_NOTIFICATION_TEXT_COLOR
+    };
+
+    // local Rectangle structure, used to update clock in header bar (used to wipe previous clock time)
+    // IMPLEMENT: MOVE TO MUPHONE.C
+    Rectangle section_clock =
+    {
+     .xMin = MUPHONE_HEADER_BAR_CLOCK_PANEL_X_MIN, .xMax = MUPHONE_HEADER_BAR_CLOCK_PANEL_X_MAX,
+     .yMin = MUPHONE_HEADER_BAR_CLOCK_PANEL_Y_MIN, .yMax = MUPHONE_HEADER_BAR_CLOCK_PANEL_Y_MAX,
+     .color = MUPHONE_HEADER_BAR_COLOR
+    };
+
+    // local Text structure, used to print clock in header bar
+    // IMPLMENT: MOVE TO MUPHONE.C
+    Text text_section_clock =
+    {
+     .xStart = MUPHONE_HEADER_BAR_CLOCK_TEXT_X_START, .yStart = MUPHONE_HEADER_BAR_CLOCK_TEXT_Y_START,
+     .string = teststring, .color = MUPHONE_HEADER_BAR_NOTIFICATION_TEXT_COLOR
+    };
+
+    // write initial notification status
+    LCD_DrawRectangleStructure(section_unread_message_notification);
+
+    // print updated unread message notification
+    LCD_PrintTextStructure(text_section_unread_message_notification);
+
+    // write initial clock
+    LCD_DrawRectangleStructure(section_clock);
+    LCD_PrintTextStructure(text_section_clock);
+
+
+    while(1)
+    {
+        /* check if unread message notification needs to change */
+        if (previous_unread_message_count != unread_message_count)
+        {
+            previous_unread_message_count = unread_message_count;       // update local count
+
+            /* update MuPhone header bar with current amount of unread messages */
+
+            // edge case for notification grammar
+            if (previous_unread_message_count == 1)
+            {
+                // update unread_message_count_str with current value
+                sprintf(unread_message_notification, "%u New Message", previous_unread_message_count);
+            }
+            else
+            {
+                // update unread_message_count_str with current value
+                sprintf(unread_message_notification, "%u New Messages", previous_unread_message_count);
+            }
+
+            // check if update needs to be made to text color
+            if ((previous_unread_message_count == 0) &&
+                (text_section_unread_message_notification.color != MUPHONE_HEADER_BAR_NOTIFICATION_TEXT_COLOR))
+            {
+                text_section_unread_message_notification.color = MUPHONE_HEADER_BAR_NOTIFICATION_TEXT_COLOR;
+            }
+            else if ((previous_unread_message_count > 0) &&
+                    (text_section_unread_message_notification.color != MUPHONE_HEADER_BAR_IMPORTANT_NOTIFICATION_TEXT_COLOR))
+            {
+                text_section_unread_message_notification.color = MUPHONE_HEADER_BAR_IMPORTANT_NOTIFICATION_TEXT_COLOR;
+            }
+
+            // update local Text structure
+            text_section_unread_message_notification.string = unread_message_notification;
+
+
+            // wipe previous notification from MuPhone header bar
+            LCD_DrawRectangleStructure(section_unread_message_notification);
+
+            // print updated unread message notification
+            LCD_PrintTextStructure(text_section_unread_message_notification);
+        }
+
+        // sleep notification checking for a second
+        G8RTOS_thread_sleep(ONE_SECOND_MS);
+    }
+}
+
 /* threads for Compose Message */
 
 /************************************************************************************
@@ -1080,33 +1207,27 @@ void thread_mumessage_compose_message_check_TP(void)
     int index = -1;
 
     // check if touch interacted with back button (IMPLEMENT)
-
-    // check if touch interacted with message box (IMPLEMENT)
-
-    // check if touch interacted with 'Send' button (IMPLEMENT)
-    //check if index hasnt already been changed, I.E. another section already recognized as being pressed
-    if(index == -1)
+    if (index == BACK_BUTTON_INDEX)
     {
-            //check bounds of touch
-            //this indentation is really gonna piss chris off lol
-        if(     touch.x >= COMPOSE_MESSAGE_SEND_BUTTON_X_MIN
-           &&   touch.x <= COMPOSE_MESSAGE_SEND_BUTTON_X_MAX
-           &&   touch.y >= COMPOSE_MESSAGE_SEND_BUTTON_Y_MIN
-           &&   touch.y <= COMPOSE_MESSAGE_SEND_BUTTON_Y_MAX)
-        {
-            //send button has been pressed
+        //IMPLEMENT
+    }
 
-            if(phone.board_type == Client)
-            {
-                send_message(Host); //send message to the host if this phone is a client
-            }
-            else if(phone.board_type == Host)
-            {
-                send_message(Client);
-            }
+    // check if touch interacted with 'Send' button
+    index = TP_CheckForSectionPress( touch, section_compose_message_header_buttons,
+                                     (sizeof(section_compose_message_header_buttons)/sizeof(section_compose_message_header_buttons[0])));
 
-        }
+    if (index == SEND_BUTTON_INDEX)     // send button was pressed
+    {
+        unread_message_count++;     // TESTING new message notification
 
+//        if(phone.board_type == Client)
+//        {
+//            send_message(Host);     //send message to the host if this phone is a client
+//        }
+//        else if(phone.board_type == Host)
+//        {
+//            send_message(Client);
+//        }
     }
 
     // check if touch interacted with keyboard currently displayed
