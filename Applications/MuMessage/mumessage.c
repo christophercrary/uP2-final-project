@@ -775,6 +775,9 @@ static uint16_t current_message_index = 0;
 
 /////////////////////////////////PRIVATE FUNCTIONS///////////////////////////////////
 
+
+
+
 /************************************************************************************
 * Name: insert_character
 * Purpose: Helper function to insert an ASCII character from a given cursor position
@@ -785,7 +788,8 @@ static inline void insert_character(uint8_t character)
 {
     // IMPLEMENT: insert semaphore for cursor
 
-    if ((cursor.x < COMPOSE_MESSAGE_CURSOR_X_MAX) &&
+    if  (character != 0 &&
+        (cursor.x < COMPOSE_MESSAGE_CURSOR_X_MAX) &&
         (cursor.y < COMPOSE_MESSAGE_CURSOR_Y_MAX))
     {
         // the only way to successfully write back a character after deleting a character
@@ -907,7 +911,7 @@ static inline void send_message(Board_Type_t host_or_client)
     }
 
     //append a zero to data
-    insert_character(0); //null between sent messages
+   // insert_character(0); //null between sent messages
 
 //    uint8_t intended_data = MUMESSAGE;
     G8RTOS_semaphore_wait(&semaphore_CC3100);
@@ -921,10 +925,7 @@ static inline void send_message(Board_Type_t host_or_client)
     //message has now been sent, need to update the message log
     for(int i = 0; i<NUMBER_OF_ROWS_OF_TEXT;i++)
     {
-        if(count == mu_message.message_data.header_info.size_of_data)
-          {
-               break;
-          }
+
         for(int j = 0; j < NUMBER_OF_CHARS_PER_ROW;j++)
         {
 
@@ -937,6 +938,11 @@ static inline void send_message(Board_Type_t host_or_client)
           count++;
 
         }
+
+        if(count == mu_message.message_data.header_info.size_of_data)
+          {
+               break;
+          }
         mu_message.old_messages.row_index++;
     }
     mu_message.old_messages.contact_message_history[0].message_status[mu_message.old_messages.number_of_strings++] = SENT;
@@ -1046,17 +1052,11 @@ void thread_mumessage_compose_message(void)
     LCD_PrintTextSection(text_section_keyboard1_no_click,
                            (sizeof(text_section_keyboard1_no_click)/sizeof(text_section_keyboard1_no_click[0])));
 
-    index_of_message_row = 0;
-    index_of_message_col = 0; //for data structure
 
-    mu_message.old_messages.row_index = 0;
-    mu_message.old_messages.col_index = 0;
-    mu_message.message_data.header_info.intended_app = MUMESSAGE;
-    mu_message.message_data.header_info.size_of_data = 0; //initialize size to send to zero
     /* add the necessary aperiodic thread for touches made to the LCD TouchPanel */
     G8RTOS_add_aperiodic_thread(aperiodic_mumessage_compose_message, PORT4_IRQn, 6);
 
-    //G8RTOS_add_thread(thread_receive_data, 50, "receiveData"); CHRIS COMMENT, UNCOMMENT FOR WIFI APPLICATION
+    G8RTOS_add_thread(thread_receive_data, 50, "receiveData"); //CHRIS COMMENT, UNCOMMENT FOR WIFI APPLICATION
 
 
     G8RTOS_kill_current_thread();
@@ -1637,8 +1637,38 @@ void thread_receive_message_data()
 {
     G8RTOS_semaphore_wait(&semaphore_CC3100);
 
-    ReceiveData((uint8_t*)&mu_message.message_data.new_message[0], sizeof(mu_message.message_data.new_message[0]));
-    G8RTOS_semaphore_signal(&semaphore_CC3100);
+    ReceiveData((uint8_t*)&mu_message.message_data.new_message[0], phone.header_data.size_of_data);
+
+    G8RTOS_semaphore_signal(&semaphore_CC3100);            //do something
+    //message has now been sent, need to update the message log
+    uint32_t index = 0;
+    for(int i = 0; i < NUMBER_OF_ROWS_OF_TEXT;i++)
+    {
+
+        for(int j = 0; j < NUMBER_OF_CHARS_PER_ROW;j++)
+        {
+
+          mu_message.old_messages.contact_message_history[0].old_messages[mu_message.old_messages.row_index][mu_message.old_messages.col_index++]
+                                                = mu_message.message_data.new_message[i][j];
+          if(index == phone.header_data.size_of_data)
+          {
+              break;
+          }
+          index++;
+
+        }
+     if(index == phone.header_data.size_of_data)
+       {
+              break;
+       }
+
+        mu_message.old_messages.row_index++;
+    }
+
+
+    mu_message.old_messages.contact_message_history[0].message_status[mu_message.old_messages.number_of_strings++] = RECEIVED;
+
+    phone.message_received++;
 
     G8RTOS_kill_current_thread(); //kill thread
 }

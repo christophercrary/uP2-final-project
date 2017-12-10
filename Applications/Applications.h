@@ -7,6 +7,7 @@
 #include "mumessage.h"
 #include "pong.h"
 #include "BSP.h"
+
 #ifndef APPLICATIONS_H
 #define APPLICATIONS_H
 //enum used to determine the different types of data that can be sent/received
@@ -26,7 +27,7 @@ typedef enum{
 
 
 typedef struct{
-
+    //uint32_t IP_address_to_send_to; //this is determine if the data is being sent to the proper contact IMPLEMENT
     Intended_Data_t intended_app;
     uint16_t size_of_data;
 } Header_Data_t;
@@ -55,11 +56,10 @@ typedef struct
 
     Current_App_t current_app; //which app is currently open
     Board_Type_t board_type; //host or client
+    Header_Data_t header_data; //variable that determines who the data is for
+    uint8_t message_received; //will hold the amount of messages received
 
-    //messaging app related  data
-    //Message_Data_t message_data;
-    //Old_Messages_t old_messages;
-
+    uint32_t IP_address; //Self's IP address
 
 }Phone_t;
 

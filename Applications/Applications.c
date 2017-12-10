@@ -64,13 +64,28 @@ void thread_init_client_wifi()
 void thread_receive_data()
 {
 
-    Header_Data_t header_data; //variable that determines who the data is for
+    uint32_t sleep_time = 0;
+
     while(1)
     {
+        if(phone.current_app == HOME_SCREEN)
+        {
+            sleep_time = 100; //100 ms sleep time
+        }
+        else if(phone.current_app == MUMESSAGE)
+        {
+            sleep_time = 100;
+        }
+        else if(phone.current_app == PONG)
+        {
+            sleep_time = 5; //5 ms
+        }
+
+
         G8RTOS_semaphore_wait(&semaphore_CC3100);
 
         //read in data, the first byte that needs to be sent will determine which application the data is intended for
-        while((ReceiveData((uint8_t*)&header_data, sizeof(header_data))) < 0)
+        while((ReceiveData((uint8_t*)&phone.header_data, sizeof(phone.header_data))) < 0)
          {
              //for reading data till a nonzero value is returned
              G8RTOS_semaphore_signal(&semaphore_CC3100);
@@ -79,40 +94,11 @@ void thread_receive_data()
           }
         G8RTOS_semaphore_signal(&semaphore_CC3100);
 
-        if(header_data.intended_app == MUMESSAGE)
+        if(phone.header_data.intended_app == MUMESSAGE)
         {
-            G8RTOS_semaphore_wait(&semaphore_CC3100);
-
-            ReceiveData((uint8_t*)&mu_message.message_data.new_message[0], header_data.size_of_data);
-
-            G8RTOS_semaphore_signal(&semaphore_CC3100);            //do something
-            //message has now been sent, need to update the message log
-            uint32_t index = 0;
-            for(int i = 0; i<NUMBER_OF_ROWS_OF_TEXT;i++)
-            {
-                if(index == header_data.size_of_data)
-                  {
-                             break;
-                  }
-                for(int j = 0; j < NUMBER_OF_CHARS_PER_ROW;j++)
-                {
-
-                  mu_message.old_messages.contact_message_history[0].old_messages[mu_message.old_messages.row_index][mu_message.old_messages.col_index++]
-                                                        = mu_message.message_data.new_message[i][j];
-                  if(index == header_data.size_of_data)
-                  {
-                      break;
-                  }
-                  index++;
-
-                }
-                mu_message.old_messages.row_index++;
-            }
-
-            mu_message.old_messages.contact_message_history[0].message_status[mu_message.old_messages.number_of_strings++] = RECEIVED;
-
+            G8RTOS_add_thread( thread_receive_message_data, 20, "Receive Message");
         }
-        else if(header_data.intended_app == PONG)
+        else if(phone.header_data.intended_app == PONG)
         {
            // G8RTOS_add_thread(thread_receive_pong_data, 10, "pong_data");
             //do something

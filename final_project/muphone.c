@@ -50,20 +50,30 @@ static inline void muphone_init(void)
 
     G8RTOS_semaphore_init(&semaphore_CC3100, 1);
 
-    phone.board_type = Host;
-    //phone.board_type = Client;
+   //phone.board_type = Host;
+    phone.board_type = Client;
     phone.current_app = HOME_SCREEN;
+
+
+    //initializations for mu_message
+    index_of_message_row = 0;
+    index_of_message_col = 0; //for data structure
+    mu_message.old_messages.row_index = 0;
+    mu_message.old_messages.col_index = 0;
+    mu_message.message_data.header_info.intended_app = MUMESSAGE;
+    mu_message.message_data.header_info.size_of_data = 0; //initialize size to send to zero
+    phone.message_received = 0;
     mu_message.old_messages.number_of_strings = 0;
     //message data should already be initialized to zero
 
     if(phone.board_type == Host)
     {
-      //  G8RTOS_add_thread(thread_init_host_wifi, 30, "initHostWifi"); CHRIS COMMENT, UNCOMMENT FOR WIFI APPLICATION
+        G8RTOS_add_thread(thread_init_host_wifi, 30, "initHostWifi"); //CHRIS COMMENT, UNCOMMENT FOR WIFI APPLICATION
     }
     else
     {
         //client
-      // G8RTOS_add_thread(thread_init_client_wifi, 30, "initClientWifi"); CHRIS COMMENT, UNCOMMENT FOR WIFI APPLICATION
+       G8RTOS_add_thread(thread_init_client_wifi, 30, "initClientWifi"); //CHRIS COMMENT, UNCOMMENT FOR WIFI APPLICATION
 
        // G8RTOS_add_thread(thread_send_pong_data, 50, "sendPongData"); //client will currently be sending this stuff to the host
 
@@ -135,6 +145,20 @@ void thread_muphone_lock_screen(void)
 void thread_muphone_home_screen(void)
 {
     // IMPLEMENT
+
+    LCD_DrawRectangle(MU_MESSAGE_APP_X_START,
+                      MU_MESSAGE_APP_X_END,
+                      MU_MESAGE_APP_Y_START,
+                      MMU_MESSAGE_APP_Y_END,
+                      LCD_BLUE);
+
+    LCD_DrawRectangle( PONG_APP_X_START,
+                       PONG_APP_X_END,
+                       PONG_APP_Y_START,
+                       PONG_APP_Y_END,
+                       LCD_BLUE);
+
+
 }
 
 /**************************** END OF COMMON THREADS ********************************/
