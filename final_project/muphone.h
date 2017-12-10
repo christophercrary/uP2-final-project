@@ -9,6 +9,8 @@
 /////////////////////////////////DEPENDENCIES////////////////////////////////////////
 
 #include "msp.h"    // used for necessary data types
+#include <stdlib.h>
+#include <stdio.h>      // used for specific wrapper functions, such as sprintf
 #include "G8RTOS.h"     // RTOS used to initialize the MSP432 and control the MuPhone
 #include "BSP.h"        // used to control MSP432 device (QUESTION: is this needed??)
 
@@ -18,6 +20,51 @@
 //header guard
 #ifndef MUPHONE_H_
 #define MUPHONE_H_
+
+/* boundaries for LCD screen */
+#define LCD_SCREEN_X_MIN 0
+#define LCD_SCREEN_X_MAX 320
+#define LCD_SCREEN_Y_MIN 0
+#define LCD_SCREEN_Y_MAX 240
+
+/* LCD text */
+#define LCD_TEXT_WIDTH      8       // in terms of pixels
+#define LCD_TEXT_HEIGHT     16
+#define LCD_TEXT_COLOR      LCD_BLACK
+
+/* defined color palette */
+#define MUPHONE_HOME_SCREEN_BACKGROUND_COLOR                    LCD_BLACK
+#define MUPHONE_HEADER_BAR_COLOR                                LCD_BLACK
+#define MUPHONE_HEADER_BAR_DIVIDER_COLOR                        LCD_BLACK
+#define MUPHONE_HEADER_BAR_NOTIFICATION_TEXT_COLOR              LCD_WHITE
+#define MUPHONE_HEADER_BAR_IMPORTANT_NOTIFICATION_TEXT_COLOR    LCD_RED
+
+/* boundaries of phone header bar */
+#define MUPHONE_HEADER_BAR_WIDTH            (LCD_SCREEN_X_MAX - LCD_SCREEN_X_MIN)
+#define MUPHONE_HEADER_BAR_HEIGHT           20
+#define MUPHONE_HEADER_BAR_X_MIN            LCD_SCREEN_X_MIN
+#define MUPHONE_HEADER_BAR_X_MAX            (LCD_SCREEN_X_MIN + MUPHONE_HEADER_BAR_WIDTH)
+#define MUPHONE_HEADER_BAR_Y_MIN            LCD_SCREEN_Y_MIN
+#define MUPHONE_HEADER_BAR_Y_MAX            (MUPHONE_HEADER_BAR_Y_MIN + MUPHONE_HEADER_BAR_HEIGHT)
+
+#define MUPHONE_HEADER_BAR_DIVIDER_WIDTH        (MUPHONE_HEADER_BAR_X_MAX - MUPHONE_HEADER_BAR_X_MIN)
+#define MUPHONE_HEADER_BAR_DIVIDER_HEIGHT       1
+#define MUPHONE_HEADER_BAR_DIVIDER_X_MIN        MUPHONE_HEADER_BAR_X_MIN
+#define MUPHONE_HEADER_BAR_DIVIDER_X_MAX        (MUPHONE_HEADER_BAR_DIVIDER_X_MIN + MUPHONE_HEADER_BAR_DIVIDER_WIDTH)
+#define MUPHONE_HEADER_BAR_DIVIDER_Y_MIN        MUPHONE_HEADER_BAR_Y_MAX
+#define MUPHONE_HEADER_BAR_DIVIDER_Y_MAX        (MUPHONE_HEADER_BAR_DIVIDER_Y_MIN + MUPHONE_HEADER_BAR_DIVIDER_HEIGHT)
+
+#define MUPHONE_HEADER_BAR_CLOCK_PANEL_OFFSET      2       // spacing used for edges of button
+#define MUPHONE_HEADER_BAR_CLOCK_PANEL_WIDTH       ((LCD_TEXT_WIDTH * 18) + (MUPHONE_HEADER_BAR_CLOCK_PANEL_OFFSET * 2))
+#define MUPHONE_HEADER_BAR_CLOCK_PANEL_X_MIN       (MUPHONE_HEADER_BAR_X_MAX - MUPHONE_HEADER_BAR_CLOCK_PANEL_WIDTH)
+#define MUPHONE_HEADER_BAR_CLOCK_PANEL_X_MAX       MUPHONE_HEADER_BAR_X_MAX
+#define MUPHONE_HEADER_BAR_CLOCK_PANEL_Y_MIN       MUPHONE_HEADER_BAR_Y_MIN
+#define MUPHONE_HEADER_BAR_CLOCK_PANEL_Y_MAX       (MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_PANEL_Y_MIN + LCD_TEXT_HEIGHT + MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_PANEL_OFFSET)
+
+#define MUPHONE_HEADER_BAR_CLOCK_TEXT_X_OFFSET       2
+#define MUPHONE_HEADER_BAR_CLOCK_TEXT_Y_OFFSET       2
+#define MUPHONE_HEADER_BAR_CLOCK_TEXT_X_START        (MUPHONE_HEADER_BAR_CLOCK_PANEL_X_MIN + MUPHONE_HEADER_BAR_CLOCK_TEXT_X_OFFSET)
+#define MUPHONE_HEADER_BAR_CLOCK_TEXT_Y_START        (MUPHONE_HEADER_BAR_CLOCK_PANEL_Y_MIN + MUPHONE_HEADER_BAR_CLOCK_TEXT_Y_OFFSET)
 ////////////////////////////////END OF DEFINES///////////////////////////////////////
 
 ////////////////////////////////////EXTERNS//////////////////////////////////////////
