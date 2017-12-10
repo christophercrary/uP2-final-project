@@ -14,6 +14,9 @@
 #ifndef MUMESSAGE_H_
 #define MUMESSAGE_H_
 
+#include "Applications.h"
+#include "cc3100_usage.h"
+
 /* boundaries for LCD screen */
 #define LCD_SCREEN_X_MIN 0
 #define LCD_SCREEN_X_MAX 320
@@ -104,7 +107,10 @@
 #define TEXT_ARENA_Y_MIN        (COMPOSE_MESSAGE_BACKGROUND_Y_MIN + COMPOSE_MESSAGE_HEADER_HEIGHT + COMPOSE_MESSAGE_HEADER_DIVIDER_HEIGHT)
 #define TEXT_ARENA_Y_MAX        (TEXT_ARENA_Y_MIN + TEXT_ARENA_HEIGHT)
 
-
+/* size of data structure to hold messages */
+#define NUMBER_OF_ROWS_OF_TEXT                      (5) //currently only hold 5 rows of text per message IMPLEMENT
+#define NUMBER_OF_CHARS_PER_ROW                     ((int)TEXT_ARENA_WIDTH>>3) //divide by 8
+#define NUMBER_OF_TOTAL_MESSAGES                    (10)
 /* boundaries of keyboard */
 
 #define KEYBOARD_DIVIDER_WIDTH  (LCD_SCREEN_X_MAX - LCD_SCREEN_X_MIN)
@@ -120,8 +126,6 @@
 #define KEYBOARD_X_MAX          (KEYBOARD_X_MIN + KEYBOARD_WIDTH)
 #define KEYBOARD_Y_MIN          (COMPOSE_MESSAGE_BACKGROUND_Y_MIN + (COMPOSE_MESSAGE_HEADER_HEIGHT + COMPOSE_MESSAGE_HEADER_DIVIDER_HEIGHT + TEXT_ARENA_HEIGHT + KEYBOARD_DIVIDER_HEIGHT))
 #define KEYBOARD_Y_MAX          (KEYBOARD_Y_MIN + KEYBOARD_HEIGHT)
-
-
 
 /* boundaries for keyboard buttons */
 
@@ -417,6 +421,9 @@
 #define RETURN_BUTTON_TEXT_X_START       (RETURN_BUTTON_X_MIN + ((KEYBOARD_BUTTON_BIGGER_WIDTH - (LCD_TEXT_WIDTH * 6)) >> 1))
 #define RETURN_BUTTON_TEXT_Y_START       (RETURN_BUTTON_Y_MIN + KEYBOARD_BUTTON_BIGGER_TEXT_Y_OFFSET)
 
+#define COMMUNICATION_PROTOCOL_ACKNOWLEDGE (0x98)
+#define NUMBER_OF_CONTACTS                  (3)
+#define MAX_NUMBER_OF_MESSAGES              (10)
 // keyboard #2 (upper-case keyboard)
 
 
@@ -430,6 +437,47 @@
 ////////////////////////////////END OF EXTERNS///////////////////////////////////////
 
 //////////////////////////////PUBLIC DATA MEMBERS////////////////////////////////////
+
+//message data
+
+typedef struct
+{
+    Header_Data_t header_info;
+    char new_message[NUMBER_OF_ROWS_OF_TEXT][NUMBER_OF_CHARS_PER_ROW]; //NEED to set everything to zero, although pretty sure its done automatically
+    uint8_t end_of_text; //this variable is to determine that the text has been transmitted in full to another board
+
+}Message_Data_t;
+
+
+typedef struct
+{
+    char old_messages[NUMBER_OF_ROWS_OF_TEXT* MAX_NUMBER_OF_MESSAGES][NUMBER_OF_CHARS_PER_ROW]; //for conversations screen, hold old messages (probably will run into memory issues)
+    Message_Status_t message_status[MAX_NUMBER_OF_MESSAGES];
+
+}Old_Messages_t;
+
+typedef struct
+{
+    Old_Messages_t contact_message_history[NUMBER_OF_CONTACTS];
+    uint32_t row_index;
+    uint32_t col_index;
+    uint32_t number_of_strings;
+}Message_Log_t;
+
+
+
+
+typedef struct
+{
+    Message_Data_t message_data;
+    Message_Log_t old_messages;
+}MuMessage_t;
+
+
+MuMessage_t mu_message;
+uint32_t index_of_message_row; //indexes for global data structure for new messages
+uint32_t index_of_message_col;
+
 //////////////////////////END OF PUBLIC DATA MEMBERS/////////////////////////////////
 
 //////////////////////////////PRIVATE DATA MEMBERS///////////////////////////////////
@@ -516,6 +564,14 @@ void thread_mumessage_open_app(void);
 * Output: N/A
 ************************************************************************************/
 void thread_mumessage_start_app(void);
+
+
+
+void thread_send_pong_data();
+void thread_receive_message_data();
+
+void thread_send_message_data();
+void thread_receive_pong_data();
 
 /**************************** END OF COMMON THREADS ********************************/
 

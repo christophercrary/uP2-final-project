@@ -35,7 +35,6 @@ static bool button_pressed = false;
 
 /* semaphores */
 semaphore_t semaphore_gameState;       // used to access overall packet of gamestate information
-semaphore_t semaphore_CC3100;          // used to access CC3100 WiFi chip
 
 
 /************************** Static Host IP Address *****************************/

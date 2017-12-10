@@ -20,6 +20,10 @@
 ////////////////////////////////END OF DEFINES///////////////////////////////////////
 
 ////////////////////////////////////EXTERNS//////////////////////////////////////////
+
+extern semaphore_t semaphore_CC3100;          // used to access CC3100 WiFi chip
+
+
 ////////////////////////////////END OF EXTERNS///////////////////////////////////////
 
 //////////////////////////////PUBLIC DATA MEMBERS////////////////////////////////////
@@ -218,6 +222,23 @@ static inline void insert_character(uint8_t character)
         cursor.x += LCD_TEXT_WIDTH;
     }
 
+    mu_message.message_data.new_message[index_of_message_row][index_of_message_col] = character; //put character in data structure
+    //update indexes of data structure
+    if(index_of_message_col != NUMBER_OF_CHARS_PER_ROW - 1)
+    {
+          index_of_message_col++;
+          mu_message.message_data.header_info.size_of_data++; //increment number of bytes to send
+    }
+    else
+    {
+        if(index_of_message_row != NUMBER_OF_ROWS_OF_TEXT - 1)
+        {
+            index_of_message_row++; //increment y index
+            index_of_message_col = 0; //reset x index
+            mu_message.message_data.header_info.size_of_data++; //increment number of bytes to send
+
+        }
+    }
     return;
 }
 
@@ -242,9 +263,94 @@ static inline void delete_character()
     cursor.x -= LCD_TEXT_WIDTH;
     }
 
+    //update indexes
+    mu_message.message_data.new_message[index_of_message_row][index_of_message_col] = 0;
+
+    if(index_of_message_col == 0)
+    {
+        if(index_of_message_row != 0)
+        {
+            index_of_message_row--; //decrement y index
+            index_of_message_col = NUMBER_OF_CHARS_PER_ROW - 1; //set x to max value
+            mu_message.message_data.header_info.size_of_data--; //decrement number of bytes to send
+
+        }
+        else
+        {
+            //dont do shit
+        }
+
+    }
+    else
+    {
+        index_of_message_col--;
+        mu_message.message_data.header_info.size_of_data--; //decrement number of bytes to send
+
+    }
 
     return;
 }
+
+/************************************************************************************
+* Name: send_message
+* Purpose: Helper function to send message via wifi after touch is recognized on send message rectangle
+* Input(s): Board_Type_t that defines who the message is meant to be sent to
+* Output: N/A
+* NOTE: This inline functions waits and signals semaphore_CC3100
+************************************************************************************/
+static inline void send_message(Board_Type_t host_or_client)
+{
+
+    uint32_t ip_address;
+    if(host_or_client == Host)
+    {
+        //send message to host from client
+         ip_address = HOST_IP_ADDR;
+    }
+
+    else
+    {
+        //sending data from host to client
+        ip_address = client1.IP_address; //CURRENTLY ONLY FOR FIRST CLIENT IMPLEMENT OTHER CLIENT LATER
+    }
+
+    //append a zero to data
+    insert_character(0); //null between sent messages
+
+//    uint8_t intended_data = MUMESSAGE;
+    G8RTOS_semaphore_wait(&semaphore_CC3100);
+
+    SendData((uint8_t*)&mu_message.message_data.header_info, ip_address, sizeof(mu_message.message_data.header_info));
+    SendData((uint8_t*)&mu_message.message_data.new_message[0], ip_address, (mu_message.message_data.header_info.size_of_data));
+
+    G8RTOS_semaphore_signal(&semaphore_CC3100);
+
+    uint32_t count = 0;
+    //message has now been sent, need to update the message log
+    for(int i = 0; i<NUMBER_OF_ROWS_OF_TEXT;i++)
+    {
+        if(count == mu_message.message_data.header_info.size_of_data)
+          {
+               break;
+          }
+        for(int j = 0; j < NUMBER_OF_CHARS_PER_ROW;j++)
+        {
+
+          mu_message.old_messages.contact_message_history[0].old_messages[mu_message.old_messages.row_index][mu_message.old_messages.col_index++]
+                                                = mu_message.message_data.new_message[i][j];
+          if(count == mu_message.message_data.header_info.size_of_data)
+             {
+                 break;
+             }
+          count++;
+
+        }
+        mu_message.old_messages.row_index++;
+    }
+    mu_message.old_messages.contact_message_history[0].message_status[mu_message.old_messages.number_of_strings++] = SENT;
+}
+
+
 
 //////////////////////////////END OF PRIVATE FUNCTIONS///////////////////////////////
 
@@ -345,8 +451,18 @@ void thread_mumessage_compose_message(void)
     cursor.x = COMPOSE_MESSAGE_CURSOR_X_MIN;
     cursor.y = COMPOSE_MESSAGE_CURSOR_Y_MIN;
 
+    index_of_message_row = 0;
+    index_of_message_col = 0; //for data structure
+
+    mu_message.old_messages.row_index = 0;
+    mu_message.old_messages.col_index = 0;
+    mu_message.message_data.header_info.intended_app = MUMESSAGE;
+    mu_message.message_data.header_info.size_of_data = 0; //initialize size to send to zero
     /* add the necessary aperiodic thread for touches made to the LCD TouchPanel */
     G8RTOS_add_aperiodic_thread(aperiodic_mumessage_compose_message, PORT4_IRQn, 6);
+
+    //G8RTOS_add_thread(thread_receive_data, 50, "receiveData"); CHRIS COMMENT, UNCOMMENT FOR WIFI APPLICATION
+
 
     G8RTOS_kill_current_thread();
 
@@ -373,6 +489,30 @@ void thread_mumessage_compose_message_check_TP(void)
     // check if touch interacted with message box (IMPLEMENT)
 
     // check if touch interacted with 'Send' button (IMPLEMENT)
+    //check if index hasnt already been changed, I.E. another section already recognized as being pressed
+    if(index == -1)
+    {
+            //check bounds of touch
+            //this indentation is really gonna piss chris off lol
+        if(     touch.x >= COMPOSE_MESSAGE_SEND_BUTTON_X_MIN
+           &&   touch.x <= COMPOSE_MESSAGE_SEND_BUTTON_X_MAX
+           &&   touch.y >= COMPOSE_MESSAGE_SEND_BUTTON_Y_MIN
+           &&   touch.y <= COMPOSE_MESSAGE_SEND_BUTTON_Y_MAX)
+        {
+            //send button has been pressed
+
+            if(phone.board_type == Client)
+            {
+                send_message(Host); //send message to the host if this phone is a client
+            }
+            else if(phone.board_type == Host)
+            {
+                send_message(Client);
+            }
+
+        }
+
+    }
 
     // check if touch interacted with keyboard
     index = TP_CheckForSectionPress( touch, section_keyboard1,
@@ -441,6 +581,75 @@ void thread_mumessage_start_app(void)
 
     // initialize application instance
 }
+
+
+/*
+// test threads to test wifi communication
+void thread_send_message_data()
+{
+    //Intended_Data_t intended_data = MUMESSAGE;
+    Message_Data_t message_data;
+    char test[7] = "TESTING";
+    for(int i = 0 ; i < 7 ; i++)
+    {
+        message_data.new_message[0][i] = test[i];
+    }
+
+    while(1)
+    {
+        G8RTOS_semaphore_wait(&semaphore_CC3100);
+
+        SendData((uint8_t*)&intended_data, HOST_IP_ADDR, sizeof(intended_data));
+        SendData((uint8_t*)&message_data.new_message[0], HOST_IP_ADDR, sizeof(message_data.new_message[0]));
+        G8RTOS_semaphore_signal(&semaphore_CC3100);
+
+        G8RTOS_thread_sleep(500); //sleep for a second
+    }
+}
+*/
+//should just run once, then
+void thread_receive_message_data()
+{
+    G8RTOS_semaphore_wait(&semaphore_CC3100);
+
+    ReceiveData((uint8_t*)&mu_message.message_data.new_message[0], sizeof(mu_message.message_data.new_message[0]));
+    G8RTOS_semaphore_signal(&semaphore_CC3100);
+
+    G8RTOS_kill_current_thread(); //kill thread
+}
+
+
+void thread_send_pong_data()
+{
+
+    int rand[10] = {0,1,2,3,4,5,6,7,8,9};//random variable
+    Intended_Data_t intended_data = PONG;
+    while(1)
+    {
+        G8RTOS_semaphore_wait(&semaphore_CC3100);
+        SendData((uint8_t*)&intended_data, HOST_IP_ADDR, sizeof(intended_data));
+        SendData((uint8_t*)&rand, HOST_IP_ADDR, sizeof(rand));
+        G8RTOS_semaphore_signal(&semaphore_CC3100);
+
+        G8RTOS_thread_sleep(300); //sleep for about a second
+
+    }
+
+}
+
+void thread_receive_pong_data()
+{
+    int rand[10];
+    G8RTOS_semaphore_wait(&semaphore_CC3100);
+
+    ReceiveData((uint8_t*)&rand, sizeof(rand));
+    G8RTOS_semaphore_signal(&semaphore_CC3100);
+
+    G8RTOS_kill_current_thread(); //kill thread
+
+}
+
+
 
 /**************************** END OF COMMON THREADS ********************************/
 
