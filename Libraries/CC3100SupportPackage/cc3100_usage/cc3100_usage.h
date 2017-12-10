@@ -35,7 +35,6 @@ typedef enum
  * Should be in long format, E.g: 0xc0a8010a == 192.168.1.10
  */
 
-//currently using wes' IP address
 #define HOST_IP_ADDR           SL_IPV4_VAL(192, 168, 1, 2)   // IP address of server to connect to
 #define PORT_NUM               5001                     // Port number to be used
 #define NO_OF_PACKETS          1                        // Number of packets to send out

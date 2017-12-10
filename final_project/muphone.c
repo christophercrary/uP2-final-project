@@ -10,7 +10,7 @@
 
 #include "muphone.h"
 #include "mumessage.h"      // MuMessage messaging application
-
+#include "Applications.h"
 #include "pong.h"       // pong game application
 
 // IMPLEMENT OTHER APPLICATIONS
@@ -21,6 +21,7 @@
 ////////////////////////////////END OF DEFINES///////////////////////////////////////
 
 ////////////////////////////////////EXTERNS//////////////////////////////////////////
+extern semaphore_t semaphore_CC3100;
 ////////////////////////////////END OF EXTERNS///////////////////////////////////////
 
 //////////////////////////////PUBLIC DATA MEMBERS////////////////////////////////////
@@ -46,6 +47,29 @@ static inline void muphone_init(void)
     G8RTOS_add_thread(thread_muphone_idle, 200, "idle");
     //G8RTOS_add_thread(thread_start_game, 180, "pong - start");      // TEST
     G8RTOS_add_thread(thread_mumessage_compose_message, 180, "compose message");
+
+    G8RTOS_semaphore_init(&semaphore_CC3100, 1);
+
+    phone.board_type = Host;
+    //phone.board_type = Client;
+    phone.current_app = HOME_SCREEN;
+    mu_message.old_messages.number_of_strings = 0;
+    //message data should already be initialized to zero
+
+    if(phone.board_type == Host)
+    {
+      //  G8RTOS_add_thread(thread_init_host_wifi, 30, "initHostWifi"); CHRIS COMMENT, UNCOMMENT FOR WIFI APPLICATION
+    }
+    else
+    {
+        //client
+      // G8RTOS_add_thread(thread_init_client_wifi, 30, "initClientWifi"); CHRIS COMMENT, UNCOMMENT FOR WIFI APPLICATION
+
+       // G8RTOS_add_thread(thread_send_pong_data, 50, "sendPongData"); //client will currently be sending this stuff to the host
+
+       // G8RTOS_add_thread(thread_send_message_data, 50, "sendMessageData");
+
+    }
 
     // launch the operating system
     G8RTOS_launch();
