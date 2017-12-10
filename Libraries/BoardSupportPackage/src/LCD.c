@@ -122,7 +122,7 @@ static uint16_t TP_ReadADC(uint8_t channel)
     SPI_CS_TP_LOW;
 
     // send start byte for Channel Y ADC reading
-    SPISendRecvByte(channel);
+    SPISendByte(channel);
 
     // receive upper 7 bytes of 12-bit ADC reading (shift accordingly)
     // see pg. 23 of XPT2046 datasheet for more information
@@ -186,9 +186,9 @@ void LCD_DrawRectangle(int16_t xStart, int16_t xEnd, int16_t yStart, int16_t yEn
 
     /* Set window area for high-speed RAM write */
     LCD_WriteReg(HOR_ADDR_START_POS, yStart);
-    LCD_WriteReg(HOR_ADDR_END_POS, yEnd-1);
+    LCD_WriteReg(HOR_ADDR_END_POS, yEnd);
     LCD_WriteReg(VERT_ADDR_START_POS, xStart);
-    LCD_WriteReg(VERT_ADDR_END_POS, xEnd-1);
+    LCD_WriteReg(VERT_ADDR_END_POS, xEnd);
 
 
     /* Set cursor */
@@ -206,9 +206,9 @@ void LCD_DrawRectangle(int16_t xStart, int16_t xEnd, int16_t yStart, int16_t yEn
     LCD_Write_Data_Start();
 
     // fill entire screen with color
-    for (int16_t i = xStart; i < xEnd; i++)
+    for (int16_t i = xStart; i <= xEnd; i++)
     {
-        for (int16_t j = yStart; j < yEnd; j++)
+        for (int16_t j = yStart; j <= yEnd; j++)
         {
             LCD_Write_Data_Only(Color); // write specified color to every pixel
         }
@@ -281,7 +281,7 @@ inline void LCD_PutChar(uint16_t Xpos, uint16_t Ypos, uint8_t ASCI, uint16_t cha
 }
 
 /******************************************************************************
- * Function Name  : GUI_Text
+ * Function Name  : LCD_Text
  * Description    : Displays the string
  * Input          : - Xpos: Horizontal coordinate
  *                  - Ypos: Vertical coordinate
@@ -367,20 +367,37 @@ void LCD_Text(uint16_t Xpos, uint16_t Ypos, uint8_t *str, uint16_t Color)
 
 /******************************************************************************
  * Function Name  : LCD_PrintTextStructure
+ * Description    : Prints string within specified text structure array
+ * Input          : Text text
+ * Output         : None
+ * Return         : None
+ * Attention      : None
+ *******************************************************************************/
+void LCD_PrintTextStructure(Text text)
+{
+    // IMPLEMENT ERROR CHECKING FOR TEXT COORDINATES
+
+    // write text within given text structure
+    LCD_Text(text.xStart, text.yStart, text.string, text.color);
+
+    return;
+}
+
+/******************************************************************************
+ * Function Name  : LCD_PrintTextSection
  * Description    : Prints all strings within specified Text structure array
  * Input          : Text *texts, uint16_t array_size
  * Output         : None
  * Return         : None
  * Attention      : None
  *******************************************************************************/
-void LCD_PrintTextStructure(Text *texts, uint16_t array_size)
+void LCD_PrintTextSection(Text *texts, uint16_t array_size)
 {
-    // IMPLEMENT ERROR CHECKING FOR TEXT COORDINATES
 
     // write all texts within specified Text structure
     for (uint16_t i = 0; i < array_size; i++)
     {
-        LCD_Text(texts[i].xStart, texts[i].yStart, texts[i].string, texts[i].color);
+        LCD_PrintTextStructure(texts[i]);
     }
 
     return;
@@ -453,41 +470,76 @@ void LCD_SetPoint(uint16_t Xpos, uint16_t Ypos, uint16_t color)
     LCD_WriteReg(GRAM, color);      // single GRAM address color update
 }
 
-/*******************************************************************************
+/********************************************************************************
+ * Function Name  : LCD_Write_Reg_Start
+ * Description    : Start of register writing to the LCD controller
+ * Input          : None
+ * Output         : None
+ * Return         : None
+ ********************************************************************************/
+inline void LCD_Write_Reg_Start (void)
+{
+    SPISendByte(SPI_START | SPI_WR | SPI_INDEX);
+}
+
+/********************************************************************************
  * Function Name  : LCD_Write_Data_Only
  * Description    : Data writing to the LCD controller
  * Input          : - data: data to be written
  * Output         : None
  * Return         : None
- * Attention      : None
- *******************************************************************************/
-inline void LCD_Write_Data_Only(uint16_t data)
+ ********************************************************************************/
+inline void LCD_Write_Data_Only (uint16_t data)
 {
-    /* Send out MSB */ 
-    SPISendRecvByte(data >> 8);
-
-    /* Send out LSB */ 
-    SPISendRecvByte(data & 0xFF);
-
+    /* Send out MSB */
+    SPISendByte(data >> 8);
+    
+    /* Send out LSB */
+    SPISendByte(data & 0xFF);
 }
 
-/*******************************************************************************
+/********************************************************************************
  * Function Name  : LCD_WriteData
  * Description    : LCD write register data
  * Input          : - data: register data
  * Output         : None
  * Return         : None
- * Attention      : None
- *******************************************************************************/
+ ********************************************************************************/
 inline void LCD_WriteData(uint16_t data)
 {
     SPI_CS_LCD_LOW;
-
-    SPISendRecvByte(SPI_START | SPI_WR | SPI_DATA);    /* Write : RS = 1, RW = 0       */
-    SPISendRecvByte((data >>   8));                    /* Write D8..D15                */
-    SPISendRecvByte((data & 0xFF));                    /* Write D0..D7                 */
-
+    {
+        LCD_Write_Data_Start();         /* Write : RS = 1, RW = 0       */
+        LCD_Write_Data_Only(data);      /* Write D0..D15                 */
+    }
     SPI_CS_LCD_HIGH;
+}
+
+
+/********************************************************************************
+ * Function Name  : LCD_ReadData
+ * Description    : LCD read data
+ * Input          : - data: data to be written
+ * Output         : None
+ * Return         : Returns data
+ ********************************************************************************/
+inline uint16_t LCD_ReadData()
+{
+    uint16_t value;
+    SPI_CS_LCD_LOW;
+    {
+        LCD_Write_Data_Start();             /* Read: RS = 1, RW = 1   */
+        SPISendByte(0);                 /* Dummy read 1           */
+        SPISendByte(0);                 /* Dummy read 2           */
+        SPISendByte(0);                 /* Dummy read 3           */
+        SPISendByte(0);                 /* Dummy read 4           */
+        SPISendByte(0);                 /* Dummy read 5           */
+        
+        value = (SPIRecvByte() << 8);  /* Read D8..D15           */
+        value |= SPIRecvByte();        /* Read D0..D7            */
+    }
+    SPI_CS_LCD_HIGH;
+    return value;
 }
 
 /*******************************************************************************
@@ -508,57 +560,64 @@ inline uint16_t LCD_ReadReg(uint16_t LCD_Reg)
 
 }
 
-/*******************************************************************************
+/********************************************************************************
  * Function Name  : LCD_WriteIndex
  * Description    : LCD write register address
  * Input          : - index: register address
  * Output         : None
  * Return         : None
- * Attention      : None
- *******************************************************************************/
-inline void LCD_WriteIndex(uint16_t index)      // why 16-bits??
+ ********************************************************************************/
+inline void LCD_WriteIndex(uint16_t index)
 {
-    SPI_CS_LCD_LOW;
-
     /* SPI write data */
-    SPISendRecvByte(SPI_START | SPI_WR | SPI_INDEX);   /* Write : RS = 0, RW = 0  */
-    SPISendRecvByte(0);     // upper 8-bits of LCD register index are always 0x00
-    SPISendRecvByte(index);     // send lower 8-bits of LCD register index
-
+    SPI_CS_LCD_LOW;
+    {
+        LCD_Write_Reg_Start();      /* Write : RS = 0, RW = 0  */
+        LCD_Write_Data_Only(index); /* Write : Index */
+    }
     SPI_CS_LCD_HIGH;
 }
 
-/*******************************************************************************
- * Function Name  : SPISendRecvTPByte
- * Description    : Send one byte then receive one byte of response from Touchpanel
+/********************************************************************************
+ * Function Name  : SPIRecvByte
+ * Description    : Receive one byte of data
+ * Input          : None
+ * Output         : None
+ * Return         : Received value
+ ********************************************************************************/
+inline uint8_t SPIRecvByte (void)
+{
+    /* Send dummy byte of data */
+    UCB3TXBUF = 0x00;
+    
+    /* Return received value*/
+    while(!(UCB3IFG & UCRXIFG));
+    return UCB3RXBUF;
+}
+
+/********************************************************************************
+ * Function Name  : SPISendByte
+ * Description    : Send one byte
  * Input          : uint8_t: byte
  * Output         : None
- * Return         : None
- * Attention      : None
- *******************************************************************************/
-inline uint8_t SPISendRecvTPByte (uint8_t byte)
+ * Return         : Received value
+ ********************************************************************************/
+inline void SPISendByte (uint8_t byte)
 {
-    // send byte of data
-    MAP_SPI_transmitData(EUSCI_B3_BASE, byte);
-
-    // wait as long as SPI bus is busy (receiving byte of data)
-    //while (EUSCI_B_SPI_isBusy(EUSCI_B3_BASE));
-
-    while(UCB3STATW & UCBUSY);
-
-    // return received value (SOMI pushed data during transmission)
-    return MAP_SPI_receiveData(EUSCI_B3_BASE);
+    /* Send byte of data */
+    UCB3TXBUF = byte;
+    while(!(UCB3IFG & UCTXIFG));
 }
 
 /*******************************************************************************
  * Function Name  : SPISendRecvByte
- * Description    : Send one byte then receive one byte of response
+ * Description    : Send one byte then recv one byte of response
  * Input          : uint8_t: byte
  * Output         : None
  * Return         : Recieved value
  * Attention      : None
  *******************************************************************************/
-inline uint8_t SPISendRecvByte (uint8_t byte)
+inline uint8_t SPISendRecvByte(uint8_t byte)
 {
     // send byte of data
     MAP_SPI_transmitData(EUSCI_B3_BASE, byte);
@@ -570,43 +629,21 @@ inline uint8_t SPISendRecvByte (uint8_t byte)
 
     // return received value (SOMI pushed data during transmission)
     return MAP_SPI_receiveData(EUSCI_B3_BASE);
-
 }
 
-/*******************************************************************************
+/********************************************************************************
  * Function Name  : LCD_Write_Data_Start
  * Description    : Start of data writing to the LCD controller
  * Input          : None
  * Output         : None
  * Return         : None
- * Attention      : None
- *******************************************************************************/
+ *********************************************************************************/
 inline void LCD_Write_Data_Start(void)
 {
-    SPISendRecvByte(SPI_START | SPI_WR | SPI_DATA);    /* Write : RS = 1, RW = 0 */
+    /* Write : RS = 1, RW = 0 */
+    SPISendByte(SPI_START | SPI_WR | SPI_DATA);
 }
 
-/*******************************************************************************
- * Function Name  : LCD_ReadData
- * Description    : LCD read data
- * Input          : None
- * Output         : None
- * Return         : return data
- * Attention      : Diagram (d) in datasheet
- *******************************************************************************/
-inline uint16_t LCD_ReadData()
-{
-    uint16_t value;
-    SPI_CS_LCD_LOW;
-
-    SPISendRecvByte(SPI_START | SPI_RD | SPI_DATA);   /* Read: RS = 1, RW = 1   */
-    SPISendRecvByte(0);                               /* Dummy read 1           */
-    value = (SPISendRecvByte(0) << 8);                /* Read D8..D15           */
-    value |= SPISendRecvByte(0);                      /* Read D0..D7            */
-
-    SPI_CS_LCD_HIGH;
-    return value;
-}
 
 /*******************************************************************************
  * Function Name  : LCD_WriteReg
@@ -661,7 +698,7 @@ void LCD_Init(bool usingTP)
 
     if (usingTP)
     {
-        /* Configure low true interrupt on P4.0 for TP */
+        /* Configure falling-edge interrupt on P4.0 for TP */
         MAP_GPIO_setAsInputPinWithPullUpResistor(GPIO_PORT_P4, GPIO_PIN0);
         GPIO_interruptEdgeSelect(GPIO_PORT_P4, GPIO_PIN0, GPIO_HIGH_TO_LOW_TRANSITION);
 
