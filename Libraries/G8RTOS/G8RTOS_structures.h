@@ -7,7 +7,8 @@
 
 ///////////////////////////////////INCLUDES//////////////////////////////////////////
 #include "msp.h"
-#include "G8RTOS_semaphores.h"      // used for referencing semaphore_t
+#include "G8RTOS_semaphores.h"  // used for referencing semaphore_t
+#include <stdbool.h>
 ///////////////////////////////END OF INCLUDES///////////////////////////////////////
 
 ////////////////////////////////////DEFINES//////////////////////////////////////////
@@ -26,7 +27,10 @@
 
 //////////////////////////////PUBLIC DATA MEMBERS////////////////////////////////////
 // boolean enum definition
-typedef enum { FALSE = 0, TRUE = 1 }bool_t;
+//typedef enum {
+ //   FALSE = 0,
+  //  TRUE = 1
+//}bool_t;
 
 // thread ID definition
 typedef uint32_t tid_t;
@@ -60,9 +64,9 @@ typedef struct tcb {
     struct tcb *prev;    // pointer to previous thread in tcb list
     semaphore_t *blocked;    // pointer to blocking semaphore
     uint32_t sleep_finish_time;     // variable to determine if tcb should be asleep
-    bool_t isAsleep;      // boolean to determine if tcb is asleep
+    bool isAsleep;      // boolean to determine if tcb is asleep
     uint8_t priority;       // 0 is the highest, 255 is the lowest
-    bool_t isAlive;     // determines whether thread is dead/alive
+    bool isAlive;     // determines whether thread is dead/alive
     tid_t thread_id;    // unique thread ID assigned to thread
     char thread_name[MAX_NAME_LENGTH];      // unique thread name
 }tcb_t;
@@ -75,7 +79,7 @@ typedef struct pet {
     uint32_t execution_time;        // used to know when to start pet
     uint32_t period;        // used to know how frequently to run pet
     void (*handler)(void);      // void function pointer to void pet handler
-    bool_t isAlive;     // determines whether thread is dead/alive
+    bool isAlive;     // determines whether thread is dead/alive
     pid_t pet_id;    // unique thread ID assigned to thread
     char pet_name[MAX_NAME_LENGTH];      // unique thread name
 }pet_t;
