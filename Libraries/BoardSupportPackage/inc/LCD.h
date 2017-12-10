@@ -222,13 +222,23 @@ void LCD_Text(uint16_t Xpos, uint16_t Ypos, uint8_t *str,uint16_t Color);
 
 /******************************************************************************
  * Function Name  : LCD_PrintTextStructure
+ * Description    : Prints string within specified text structure array
+ * Input          : Text text
+ * Output         : None
+ * Return         : None
+ * Attention      : None
+ *******************************************************************************/
+void LCD_PrintTextStructure(Text text);
+
+/******************************************************************************
+ * Function Name  : LCD_PrintTextSection
  * Description    : Prints all strings within specified Text structure array
  * Input          : Text *texts, uint16_t array_size
  * Output         : None
  * Return         : None
  * Attention      : None
  *******************************************************************************/
-void LCD_PrintTextStructure(Text *texts, uint16_t array_size);
+void LCD_PrintTextSection(Text *texts, uint16_t array_size);
 
 /*******************************************************************************
  * Function Name  : LCD_Write_Data_Only
@@ -292,14 +302,24 @@ inline uint16_t LCD_ReadReg(uint16_t LCD_reg);
 inline void LCD_WriteIndex(uint16_t index);
 
 /*******************************************************************************
- * Function Name  : SPISendRecvTPByte
- * Description    : Send one byte then receive one byte of response from Touchpanel
+ * Function Name  : SPISendByte
+ * Description    : Send one byte of data
  * Input          : uint8_t: byte
  * Output         : None
  * Return         : None
  * Attention      : None
  *******************************************************************************/
-inline uint8_t SPISendRecvTPByte (uint8_t byte);
+inline void SPISendByte(uint8_t byte);
+
+/*******************************************************************************
+ * Function Name  : SPIRecvByte
+ * Description    : Receive one byte of response data
+ * Input          : None
+ * Output         : None
+ * Return         : Received value
+ * Attention      : None
+ *******************************************************************************/
+inline uint8_t SPIRecvByte();
 
 /*******************************************************************************
  * Function Name  : SPISendRecvByte
