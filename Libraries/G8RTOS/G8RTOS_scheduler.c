@@ -133,7 +133,7 @@ G8RTOS_response_code_t G8RTOS_scheduler(void)
         // if next thread has higher priority and neither blocked nor asleep
         if ((temp->priority < current_max_priority) &&
             ((temp->blocked) == 0) &&
-            ((temp->isAsleep == FALSE)))
+            ((temp->isAsleep == false)))
         {
             // new lowest priority is current thread; update currently running thread
             running_thread_ptr = temp;
@@ -293,7 +293,7 @@ G8RTOS_response_code_t G8RTOS_add_pet(void (*handler)(void), uint32_t period,
         // there is guaranteed to be a "dead" PET, since PET_count < MAX_PETS
         for (temp_pet_counter = 0; temp_pet_counter < MAX_PETS; temp_pet_counter++)
         {
-            if (PET[temp_pet_counter].isAlive == FALSE)
+            if (PET[temp_pet_counter].isAlive == false)
             {
                 break;      // first "dead" PET found, retain temp_thread_counter value
             }
@@ -309,7 +309,7 @@ G8RTOS_response_code_t G8RTOS_add_pet(void (*handler)(void), uint32_t period,
     }
 
     // activate PET (make PET "alive")
-    PET[temp_pet_counter].isAlive = TRUE;
+    PET[temp_pet_counter].isAlive = true;
 
     PET[temp_pet_counter].time_offset = time_offset;       // assign time-offset
     PET[temp_pet_counter].execution_time = system_time + period + time_offset;      // assign PET execution time
@@ -387,7 +387,7 @@ G8RTOS_response_code_t G8RTOS_add_thread(void (*thread_function)(void),
        // there is guaranteed to be a "dead" thread, since TCB_count < MAX_THREADS
         for (temp_thread_counter = 0; temp_thread_counter < MAX_THREADS; temp_thread_counter++)
         {
-            if (TCB[temp_thread_counter].isAlive == FALSE)
+            if (TCB[temp_thread_counter].isAlive == false)
             {
                 break;      // first "dead" thread found, retain temp_thread_counter value
             }
@@ -406,11 +406,11 @@ G8RTOS_response_code_t G8RTOS_add_thread(void (*thread_function)(void),
     }
 
     // activate thread (make thread "alive")
-    TCB[temp_thread_counter].isAlive = TRUE;
+    TCB[temp_thread_counter].isAlive = true;
 
     // initialize no blocking or sleeping conditions
     TCB[temp_thread_counter].blocked = 0;
-    TCB[temp_thread_counter].isAsleep = FALSE;
+    TCB[temp_thread_counter].isAsleep = false;
 
     // adjust new thread's stack pointer
     TCB[temp_thread_counter].sp = &TCB_stacks[temp_thread_counter][STACKSIZE-16];
@@ -516,13 +516,13 @@ G8RTOS_response_code_t G8RTOS_init(void)
     // initialize all threads in TCB[] to be "dead" (available)
     for (uint8_t i = 0; i < MAX_THREADS; i++)
     {
-        TCB[i].isAlive = FALSE;     // thread is dead, baby - Bruce Willis, Pulp Fiction
+        TCB[i].isAlive = false;     // thread is dead, baby - Bruce Willis, Pulp Fiction
     }
 
     // initialize all PETs in PET[] to be "dead" (available)
     for (uint8_t i = 0; i < MAX_PETS; i++)
     {
-        PET[i].isAlive = FALSE;
+        PET[i].isAlive = false;
     }
 
     // initialize running thread pointer (currently running thread) to NULL
@@ -560,7 +560,7 @@ G8RTOS_response_code_t G8RTOS_kill_all_other_threads()
     for(int i = 1; i < TCB_count; i++)
     {
         /* Set alive bit of next TCB to false*/
-        threadPtr->next->isAlive= FALSE;
+        threadPtr->next->isAlive= false;
 
         threadPtr = threadPtr->next;
     }
@@ -606,7 +606,7 @@ G8RTOS_response_code_t G8RTOS_kill_pet(pid_t pet_id)
         if (temp->pet_id == pet_id)
         {
             // kill specified PET
-            temp->isAlive = FALSE;
+            temp->isAlive = false;
 
             // update number of PETs
             PET_count = PET_count - 1;
@@ -654,7 +654,7 @@ G8RTOS_response_code_t G8RTOS_kill_current_thread(void)
 
 
     // kill currently running thread
-    running_thread_ptr->isAlive = FALSE;
+    running_thread_ptr->isAlive = false;
 
 
 
@@ -709,7 +709,7 @@ G8RTOS_response_code_t G8RTOS_kill_thread(tid_t thread_id)
         if (temp->thread_id == thread_id)
         {
             // kill specified thread
-            temp->isAlive = FALSE;
+            temp->isAlive = false;
 
             // update number of threads
             TCB_count = TCB_count - 1;
@@ -819,7 +819,7 @@ G8RTOS_response_code_t G8RTOS_thread_sleep(uint32_t sleep_duration)
     running_thread_ptr->sleep_finish_time = system_time + sleep_duration;
 
     // put thread asleep
-    running_thread_ptr->isAsleep = TRUE;
+    running_thread_ptr->isAsleep = true;
 
     // suspend the running thread to allow for the necessary context switch
     // this method does not give the next thread a full 1ms time-slot
@@ -875,7 +875,7 @@ void SysTick_Handler()
     {
         if ( (temp_tcb->isAsleep) && (system_time == temp_tcb->sleep_finish_time) )
         {
-            temp_tcb->isAsleep = FALSE;      // wake up thread
+            temp_tcb->isAsleep = false;      // wake up thread
         }
 
         temp_tcb = temp_tcb->next;      // check next TCB
