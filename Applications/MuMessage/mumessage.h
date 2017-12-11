@@ -20,6 +20,18 @@
 
 /******************************* GENERAL DEFINES ***********************************/
 
+/* ASCII defines */
+// since the compose message screen is differently formatted than the message log
+// screen, it is easiest to have a separate ASCII character used to represent when to
+// wrap the screen on the compose message screen  and when to wrap the screen on the
+// message log screen
+#define VT                  11      // vertical tab
+
+
+#define COMMUNICATION_PROTOCOL_ACKNOWLEDGE              0x98
+#define MAX_NUMBER_OF_CONTACTS                          3
+#define MAX_NUMBER_OF_MESSAGES                          10
+
 /* MuPhone message notification */
 #define MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_PANEL_OFFSET      2       // spacing used for edges of button
 #define MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_PANEL_X_MIN       ((LCD_TEXT_WIDTH * 0) + (MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_PANEL_OFFSET * 1))
@@ -41,10 +53,14 @@
 
 /************************** COMPOSE MESSAGE DEFINES ********************************/
 
+/* defined message constraints */
+#define MESSAGE_MIN_NUMBER_OF_CHARACTERS                    0
+#define MESSAGE_MAX_NUMBER_OF_CHARACTERS                    256
+
 #define COMPOSE_MESSAGE_CURSOR_X_MIN  TEXT_ARENA_X_MIN + 5
 #define COMPOSE_MESSAGE_CURSOR_X_MAX  317       // change
-#define COMPOSE_MESSAGE_CURSOR_Y_MIN  TEXT_ARENA_Y_MIN + 2      // change
-#define COMPOSE_MESSAGE_CURSOR_Y_MAX  65        // IMPLEMENT CHANGE
+#define COMPOSE_MESSAGE_CURSOR_Y_MIN  TEXT_ARENA_Y_MIN + 2      // not used with text arena only being one line
+#define COMPOSE_MESSAGE_CURSOR_Y_MAX  192        // not used with text arena only being one line
 
 /* defined color palette */
 #define COMPOSE_MESSAGE_BACKGROUND_COLOR                    LCD_WHITE
@@ -481,9 +497,6 @@
 #define KEYBOARD2_X_ROW4_EDGE_OFFSET         (KEYBOARD_X_MIN + 5)       // edge spacing for row 4 of 4 on keyboard
 #define KEYBOARD2_Y_EDGE_OFFSET              (KEYBOARD_Y_MIN + 4)       // constant edge spacing for top and bottom of keyboard
 
-#define COMMUNICATION_PROTOCOL_ACKNOWLEDGE (0x98)
-#define NUMBER_OF_CONTACTS                  (3)
-#define MAX_NUMBER_OF_MESSAGES              (10)
 // keyboard #2 (upper-case keyboard)
 
 /* row 1 (of 4) keys on keyboard */
@@ -1282,40 +1295,27 @@
 typedef struct
 {
     Header_Data_t header_info;
-    char new_message[NUMBER_OF_ROWS_OF_TEXT][NUMBER_OF_CHARS_PER_ROW]; //NEED to set everything to zero, although pretty sure its done automatically
-    uint8_t end_of_text; //this variable is to determine that the text has been transmitted in full to another board
-
+    char message[MESSAGE_MAX_NUMBER_OF_CHARACTERS];
 }Message_Data_t;
 
 
 typedef struct
 {
-    char old_messages[NUMBER_OF_ROWS_OF_TEXT* MAX_NUMBER_OF_MESSAGES][NUMBER_OF_CHARS_PER_ROW]; //for conversations screen, hold old messages (probably will run into memory issues)
+    char old_message[MESSAGE_MAX_NUMBER_OF_CHARACTERS];         // for conversations screen, hold old messages (probably will run into memory issues)
     Message_Status_t message_status[MAX_NUMBER_OF_MESSAGES];
-
 }Old_Messages_t;
 
 typedef struct
 {
-    Old_Messages_t contact_message_history[NUMBER_OF_CONTACTS];
-    uint32_t row_index;
-    uint32_t col_index;
-    uint32_t number_of_strings;
+    Old_Messages_t message_history[MAX_NUMBER_OF_MESSAGES];
+    uint32_t current_number_of_messages;
 }Message_Log_t;
 
+// current message being composed
+Message_Data_t message_data;
 
-
-
-typedef struct
-{
-    Message_Data_t message_data;
-    Message_Log_t old_messages;
-}MuMessage_t;
-
-
-MuMessage_t mu_message;
-uint32_t index_of_message_row; //indexes for global data structure for new messages
-uint32_t index_of_message_col;
+// message log
+Message_Log_t message_log[MAX_NUMBER_OF_CONTACTS];
 
 //////////////////////////END OF PUBLIC DATA MEMBERS/////////////////////////////////
 

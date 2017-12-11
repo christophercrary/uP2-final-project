@@ -21,7 +21,8 @@ typedef enum{
 typedef enum{
 
     SENT = 0,
-    RECEIVED = 1
+    RECEIVED = 1,
+    DELIVERED = 2
 }Message_Status_t;
 
 

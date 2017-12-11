@@ -83,33 +83,18 @@ void thread_receive_data()
         {
             G8RTOS_semaphore_wait(&semaphore_CC3100);
 
-            ReceiveData((uint8_t*)&mu_message.message_data.new_message[0], header_data.size_of_data);
+            ReceiveData((uint8_t*)&message_data.message[0], header_data.size_of_data);
 
             G8RTOS_semaphore_signal(&semaphore_CC3100);            //do something
-            //message has now been sent, need to update the message log
-            uint32_t index = 0;
-            for(int i = 0; i<NUMBER_OF_ROWS_OF_TEXT;i++)
+
+            // message has now been sent, need to update the global message log
+            for(int i = 0; i < message.data.header_info.size_of_data; i++)
             {
-                if(index == header_data.size_of_data)
-                  {
-                             break;
-                  }
-                for(int j = 0; j < NUMBER_OF_CHARS_PER_ROW;j++)
-                {
-
-                  mu_message.old_messages.contact_message_history[0].old_messages[mu_message.old_messages.row_index][mu_message.old_messages.col_index++]
-                                                        = mu_message.message_data.new_message[i][j];
-                  if(index == header_data.size_of_data)
-                  {
-                      break;
-                  }
-                  index++;
-
-                }
-                mu_message.old_messages.row_index++;
+                old_messages.message_history[current_number_of_messages].old_message[i] = message_data.message[i];
             }
 
-            mu_message.old_messages.contact_message_history[0].message_status[mu_message.old_messages.number_of_strings++] = RECEIVED;
+            // mark message as sent
+            message_log[0].message_history[current_number_of_messages].message_status[current_number_of_messages++] = RECEIVED;
 
         }
         else if(header_data.intended_app == PONG)

@@ -25,14 +25,15 @@
 #define MAX_PETS    6       // max number of periodic event threads
 
 // define useful intervals of time in terms of milliseconds
-#define ZERO_SECONDS           0
-#define TENTH_SECOND_MS      100
-#define QUARTER_SECOND_MS    250
-#define HALF_SECOND_MS       500
-#define ONE_SECOND_MS       1000
-#define TWO_SECONDS_MS      2000
-#define FIVE_SECONDS_MS     5000
-#define TEN_SECONDS_MS      3000
+#define ZERO_SECONDS                0
+#define TENTH_SECOND_MS             100
+#define TWO_TENTHS_SECOND_MS        200
+#define QUARTER_SECOND_MS           250
+#define HALF_SECOND_MS              500
+#define ONE_SECOND_MS               1000
+#define TWO_SECONDS_MS              2000
+#define FIVE_SECONDS_MS             5000
+#define TEN_SECONDS_MS              10000
 ////////////////////////////////END OF DEFINES///////////////////////////////////////
 
 ////////////////////////////////////EXTERNS//////////////////////////////////////////
