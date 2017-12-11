@@ -18,6 +18,20 @@
 //header guard
 #ifndef MUPHONE_H_
 #define MUPHONE_H_
+
+//defines for home screen apps
+#define MU_MESSAGE_APP_X_START        50
+#define MU_MESSAGE_APP_X_END          100
+#define MU_MESSAGE_APP_Y_START        50
+#define MU_MESSAGE_APP_Y_END          100
+#define MU_MESSAGE_APP_SIZE           (MU_MESSAGE_APP_X_END-MU_MESSAGE_APP_X_START)
+
+#define PONG_APP_X_START               200
+#define PONG_APP_X_END                 250
+#define PONG_APP_Y_START                50
+#define PONG_APP_Y_END                 100
+#define PONG_APP_SIZE               (PONG_APP_X_END-PONG_APP_X_START)
+
 ////////////////////////////////END OF DEFINES///////////////////////////////////////
 
 ////////////////////////////////////EXTERNS//////////////////////////////////////////

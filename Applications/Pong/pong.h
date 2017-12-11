@@ -7,12 +7,10 @@
 ************************************************************************************/
 
 /////////////////////////////////DEPENDENCIES////////////////////////////////////////
-
 #include <stdbool.h>
 #include <stdint.h>
 #include "G8RTOS.h"
 #include "LCD.h"
-
 /////////////////////////////END OF DEPENDENCIES/////////////////////////////////////
 
 ////////////////////////////////////DEFINES//////////////////////////////////////////
@@ -20,6 +18,7 @@
 #ifndef PONG_H_
 #define PONG_H_
 
+#include "Applications.h"
 
 #define MAX_NUM_OF_PLAYERS  2
 #define MAX_NUM_OF_BALLS    8
@@ -183,6 +182,7 @@ typedef struct
 /*
  * Struct to be sent from the client to the host
  */
+
 typedef struct
 {
     uint32_t IP_address;    // client's dynamically chosen IP address

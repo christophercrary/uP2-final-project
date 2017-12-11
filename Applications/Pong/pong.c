@@ -21,6 +21,7 @@
 ////////////////////////////////END OF DEFINES///////////////////////////////////////
 
 ////////////////////////////////////EXTERNS//////////////////////////////////////////
+extern semaphore_t semaphore_CC3100;
 ////////////////////////////////END OF EXTERNS///////////////////////////////////////
 
 //////////////////////////////PUBLIC DATA MEMBERS////////////////////////////////////
@@ -33,9 +34,10 @@ static uint8_t client_overall_scores[2];       // holds scores of each player
 // static boolean to tell if the host has pressed button 1
 static bool button_pressed = false;
 
+static Header_Data_t header_data;
+
 /* semaphores */
 semaphore_t semaphore_gameState;       // used to access overall packet of gamestate information
-semaphore_t semaphore_CC3100;          // used to access CC3100 WiFi chip
 
 
 /************************** Static Host IP Address *****************************/
@@ -159,10 +161,24 @@ void UpdatePlayerOnScreen(PrevPlayer_t *prevPlayer, Player_t *currentPlayer)
 void InitBoardState()
 {
 
+    phone.current_app = PONG;
+
     // initialize necessary game semaphores
     G8RTOS_semaphore_init(&semaphore_gameState, 1);
-    G8RTOS_semaphore_init(&semaphore_CC3100,1);
+   // G8RTOS_semaphore_init(&semaphore_CC3100,1);
 
+    //initialize header data
+    header_data.intended_app = PONG;
+    if(phone.board_type == Host)
+    {
+        header_data.size_of_data = sizeof(ClientInfo_t);
+    }
+    else
+    {
+        //client
+        header_data.size_of_data = sizeof(GameState_t);
+
+    }
 
     // initialize which position the players are in in the gameState
     gameState.players[BOTTOM].position = BOTTOM;
@@ -328,7 +344,7 @@ void aperiodic_select_player(void)
 void thread_start_game(void)
 {
     // add necessary threads (QUESTION: where should this actually go??)
-    G8RTOS_add_thread(Idle, 255, "Idle");
+  //  G8RTOS_add_thread(Idle, 255, "Idle");
 
     // display game start screen visuals
 
@@ -401,7 +417,7 @@ void thread_select_player(void)
         G8RTOS_disable_aperiodic_thread(PORT4_IRQn);
 
         // create game as host
-        G8RTOS_add_thread(CreateGame, 50, "Create Game");
+        G8RTOS_add_thread(CreateGame, 30, "Create Game");
     }
     // check if client role was chosen
     else if ( (temp_coordinates.x >= SELECT_CLIENT_BUTTON_X_MIN) &&
@@ -415,7 +431,7 @@ void thread_select_player(void)
         LCD_Clear(LCD_BLACK);
 
         // join game as client
-        G8RTOS_add_thread(JoinGame, 50, "Join Game");
+        G8RTOS_add_thread(JoinGame, 30, "Join Game");
     }
     else
     {
@@ -569,20 +585,28 @@ void JoinGame()
     //only thread to run after launching OS
 
     //set initial Specific player Info
-    initCC3100(Client); //initialize wifi as client
+    //initCC3100(Client); //initialize wifi as client
 
-    gameState.client.IP_address = getLocalIP();
+    gameState.client.IP_address = client1.IP_address;
     gameState.client.displacement = 0;
     gameState.client.hasAcknowledged = false; //initially set to false
     gameState.client.hasJoined = false;
     gameState.client.isReady = true;
     gameState.client.player = PLAYER2;
 
+    G8RTOS_semaphore_wait(&semaphore_CC3100);
+
     //send player info to host
+    SendData((uint8_t *)&header_data, HOST_IP_ADDR, sizeof(header_data));
     SendData((uint8_t *)&gameState.client, HOST_IP_ADDR, sizeof(gameState.client));
 
+    Header_Data_t temp_data;
+
     // wait for server response
+    while((ReceiveData((uint8_t*)&temp_data, sizeof(temp_data))) < 0);
     while(ReceiveData((uint8_t*)&gameState.client.hasAcknowledged, sizeof(gameState.client.hasAcknowledged)) < 0);
+
+    G8RTOS_semaphore_signal(&semaphore_CC3100);
 
     // if joined game, light LED to show connection
     gameState.client.hasJoined = true;
@@ -610,7 +634,7 @@ void JoinGame()
 
     G8RTOS_add_thread(ReadJoystickClient, 45, "JoystickClient");
     G8RTOS_add_thread(SendDataToHost, 45, "dataToHost");
-    G8RTOS_add_thread(ReceiveDataFromHost, 40, "receiveData");
+   // G8RTOS_add_thread(ReceiveDataFromHost, 40, "receiveData");
     G8RTOS_add_thread(DrawObjects, 30, "DrawObjects");
     G8RTOS_add_thread(MoveLEDs, 50, "MoveLEDs");
     //dont need to add idle thread, already added at menu screen
@@ -626,8 +650,6 @@ void ReceiveDataFromHost()
     // temporary gamestate to avoid holding global gamestate for too long
     GameState_t tempGameState;
 
-    while(1)
-    {
         /* continually receive data until a value greater than 0 is returned */
 
         // wait for the CC3100 to be available
@@ -656,8 +678,10 @@ void ReceiveDataFromHost()
             G8RTOS_add_thread(EndOfGameClient, 1, "EndOfGameClient");
         }
 
-        G8RTOS_thread_sleep(5);
-    }
+      //  G8RTOS_thread_sleep(5);
+      //  G8RTOS_kill_current_thread();
+
+
 }
 
 /*
@@ -680,6 +704,7 @@ void SendDataToHost()
         //send player info to host
         G8RTOS_semaphore_wait(&semaphore_CC3100);
 
+        SendData((uint8_t*)&header_data, HOST_IP_ADDR, sizeof(header_data));
         SendData((uint8_t*)&tempClientInfo, HOST_IP_ADDR, sizeof(tempClientInfo)); //HOST_IP_ADDR is defined in CC3100 usage
 
         G8RTOS_semaphore_signal(&semaphore_CC3100);
@@ -794,8 +819,12 @@ void EndOfGameClient()
                         " (_)       (_____)  (_)   (_)  (_____)~n~n", LCD_BRIGHT_GREEN);
     LCD_Text(0, 110,    "  Waiting for host to start new game...", LCD_LIGHT_GREEN);
 
+    G8RTOS_semaphore_wait(&semaphore_CC3100);
+
     //wait for host to restart game
+    while((ReceiveData((uint8_t*)&phone.header_data, sizeof(phone.header_data))) < 0);
     while(ReceiveData((uint8_t*)&gameState.client.isReady, sizeof(gameState.client.isReady)) < 0);
+    G8RTOS_semaphore_signal(&semaphore_CC3100);
 
     InitBoardState();       // initialize board again
 
@@ -827,7 +856,7 @@ void EndOfGameClient()
 
     G8RTOS_add_thread(ReadJoystickClient, 50, "JoystickClient");
     G8RTOS_add_thread(SendDataToHost, 50, "dataToHost");
-    G8RTOS_add_thread(ReceiveDataFromHost, 50, "receiveData");
+  //  G8RTOS_add_thread(ReceiveDataFromHost, 50, "receiveData");
     G8RTOS_add_thread(DrawObjects, 50, "DrawObjects");
     G8RTOS_add_thread(MoveLEDs, 50, "MoveLEDs");
     G8RTOS_add_thread(Idle, 100, "Idle");
@@ -856,11 +885,14 @@ void CreateGame()
                         " (_)       (_____)  (_)   (_)  (_____)~n~n", LCD_BRIGHT_GREEN);
     LCD_Text(0, 110,    "       Waiting for client to join...", LCD_LIGHT_GREEN);
 
-    initCC3100(Host); //initialize CC3100 as the host
+    //initCC3100(Host); //initialize CC3100 as the host
+    G8RTOS_semaphore_wait(&semaphore_CC3100);
 
     // establish connection with client
+    while(ReceiveData((uint8_t*)&header_data, sizeof(header_data)) < 0);
     while(ReceiveData((uint8_t*)&gameState.client, sizeof(gameState.client)) < 0);
 
+    G8RTOS_semaphore_signal(&semaphore_CC3100);
     // initialize the board visuals
     InitBoardState();
     // display initial player scores
@@ -876,9 +908,12 @@ void CreateGame()
     client_overall_scores[0] = 0x30;
     client_overall_scores[1] = 0x30;
 
+    G8RTOS_semaphore_wait(&semaphore_CC3100);
     // acknowledge client
     gameState.client.hasAcknowledged = true;
+    SendData((uint8_t*)&header_data, gameState.client.IP_address, sizeof(header_data));
     SendData((uint8_t*)&gameState.client.hasAcknowledged, gameState.client.IP_address, sizeof(gameState.client.hasAcknowledged));
+    G8RTOS_semaphore_signal(&semaphore_CC3100);
 
     //light up led to show connection
     P2->DIR |= (BIT0); //make p2.0 an output
@@ -889,7 +924,7 @@ void CreateGame()
     G8RTOS_add_thread(DrawObjects, 30, "Draw Objects");
     G8RTOS_add_thread(MoveLEDs, 50, "MoveLEDs");
     G8RTOS_add_thread(SendDataToClient, 40, "DataToClient");
-    G8RTOS_add_thread(ReceiveDataFromClient, 45, "receiveFromClient");
+  //  G8RTOS_add_thread(ReceiveDataFromClient, 45, "receiveFromClient");
 
     G8RTOS_kill_current_thread();
 }
@@ -910,6 +945,8 @@ void SendDataToClient()
 
         //send packet
         G8RTOS_semaphore_wait(&semaphore_CC3100);
+        SendData((uint8_t*)&header_data, tempState.client.IP_address, sizeof(header_data));
+
         SendData( (uint8_t*)&tempState, tempState.client.IP_address, sizeof(tempState));
         G8RTOS_semaphore_signal(&semaphore_CC3100);
 
@@ -930,8 +967,8 @@ void ReceiveDataFromClient()
 {
     ClientInfo_t playerInfo; //temporary variable
 
-    while(1)
-    {
+   // while(1)
+   // {
 
         //continually receive data until return value greater than zero is returned
         G8RTOS_semaphore_wait(&semaphore_CC3100);
@@ -964,9 +1001,10 @@ void ReceiveDataFromClient()
         G8RTOS_semaphore_signal(&semaphore_gameState);
 
         //sleep for 2ms
-        G8RTOS_thread_sleep(2);
+        //G8RTOS_thread_sleep(2);
+     //   G8RTOS_kill_current_thread();
 
-    }
+   // }
 }
 
 /*
@@ -1481,7 +1519,7 @@ void EndOfGameHost()
     G8RTOS_add_thread(DrawObjects, 50, "Draw Objects");
     G8RTOS_add_thread(MoveLEDs, 50, "MoveLEDs");
     G8RTOS_add_thread(SendDataToClient, 50, "DataToClient");
-    G8RTOS_add_thread(ReceiveDataFromClient, 50, "receiveFromClient");
+   // G8RTOS_add_thread(ReceiveDataFromClient, 50, "receiveFromClient");
 
     //kill self
     G8RTOS_kill_current_thread(); //RIP
