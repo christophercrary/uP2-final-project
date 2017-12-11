@@ -12,6 +12,7 @@
 #include "mumessage.h"      // MuMessage messaging application
 #include "Applications.h"
 #include "pong.h"       // pong game application
+#include "time.h"
 
 // IMPLEMENT OTHER APPLICATIONS
 
@@ -25,9 +26,25 @@ extern semaphore_t semaphore_CC3100;
 ////////////////////////////////END OF EXTERNS///////////////////////////////////////
 
 //////////////////////////////PUBLIC DATA MEMBERS////////////////////////////////////
+
+// global variables to store information about the MuPhone system time
+// IMPLEMENT: MAKE PRIVATE TO MUPHONE (MUPHONE RESPONSIBLE FOR DISPLAYING TIME)
+//time_t system_time;
+//struct tm *timeinfo;
+
 //////////////////////////END OF PUBLIC DATA MEMBERS/////////////////////////////////
 
 //////////////////////////////PRIVATE DATA MEMBERS///////////////////////////////////
+
+const static Rectangle section_muphone_header_bar[] =
+{
+     {MUPHONE_HEADER_BAR_X_MIN, MUPHONE_HEADER_BAR_X_MAX, MUPHONE_HEADER_BAR_Y_MIN,
+      MUPHONE_HEADER_BAR_Y_MAX, MUPHONE_HEADER_BAR_COLOR},
+     {MUPHONE_HEADER_BAR_DIVIDER_X_MIN, MUPHONE_HEADER_BAR_DIVIDER_X_MAX,
+      MUPHONE_HEADER_BAR_DIVIDER_Y_MIN, MUPHONE_HEADER_BAR_DIVIDER_Y_MAX,
+      MUPHONE_HEADER_BAR_DIVIDER_COLOR}
+};
+
 //////////////////////////END OF PRIVATE DATA MEMBERS////////////////////////////////
 
 /////////////////////////////////PRIVATE FUNCTIONS///////////////////////////////////
@@ -40,12 +57,23 @@ extern semaphore_t semaphore_CC3100;
 ************************************************************************************/
 static inline void muphone_init(void)
 {
-    // initialize the MSP432 and the G8RTOS
+    /* initialize the MSP432 and the G8RTOS */
     G8RTOS_init();
 
-    // add the necessary starting threads
+    /* draw MuPhone visuals */
+
+    LCD_DrawSection(section_muphone_header_bar,
+                    (sizeof(section_muphone_header_bar)/sizeof(section_muphone_header_bar[0])));
+
+//    LCD_PrintTextSection(text_section_muphone_header_bar,
+//                    (sizeof(text_section_muphone_header_bar)/sizeof(text_section_muphone_header_bar[0])));
+
+    /* add the necessary starting threads */
     G8RTOS_add_thread(thread_muphone_idle, 200, "idle");
     //G8RTOS_add_thread(thread_start_game, 180, "pong - start");      // TEST
+
+    // MuMessage background processes
+    G8RTOS_add_thread(thread_mumessage_background_processes, 150, "mumessage - b.p.");
     G8RTOS_add_thread(thread_mumessage_compose_message, 180, "compose message");
 
     G8RTOS_semaphore_init(&semaphore_CC3100, 1);

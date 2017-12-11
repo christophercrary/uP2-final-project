@@ -147,7 +147,7 @@ typedef struct Rectangle {
 typedef struct Text {
     uint16_t xStart;        // starting locations of text on LCD screen
     uint16_t yStart;
-    uint8_t *string;        // used to represent string of 8-bit ASCII characters
+    char *string;        // used to represent string of 8-bit ASCII characters
     uint16_t color;         // color of text
 }Text;
 
@@ -192,7 +192,7 @@ void LCD_DrawRectangleStructure(Rectangle rectangle);
  * Return         : None
  * Attention      : None
  *******************************************************************************/
-void LCD_DrawSection(Rectangle* rectangles, uint16_t array_size);
+void LCD_DrawSection(const Rectangle* rectangles, uint16_t array_size);
 
 /******************************************************************************
  * Function Name  : LCD_PutChar
@@ -205,7 +205,7 @@ void LCD_DrawSection(Rectangle* rectangles, uint16_t array_size);
  * Return         : None
  * Attention      : None
  *******************************************************************************/
-inline void LCD_PutChar(uint16_t Xpos, uint16_t Ypos, uint8_t ASCI, uint16_t charColor);
+inline void LCD_PutChar(uint16_t Xpos, uint16_t Ypos, char ASCI, uint16_t charColor);
 
 /******************************************************************************
  * Function Name  : LCD_Text
@@ -218,7 +218,7 @@ inline void LCD_PutChar(uint16_t Xpos, uint16_t Ypos, uint8_t ASCI, uint16_t cha
  * Return         : None
  * Attention      : None
  *******************************************************************************/
-void LCD_Text(uint16_t Xpos, uint16_t Ypos, uint8_t *str,uint16_t Color);
+void LCD_Text(uint16_t Xpos, uint16_t Ypos, char *str, uint16_t Color);
 
 /******************************************************************************
  * Function Name  : LCD_PrintTextStructure
@@ -238,7 +238,7 @@ void LCD_PrintTextStructure(Text text);
  * Return         : None
  * Attention      : None
  *******************************************************************************/
-void LCD_PrintTextSection(Text *texts, uint16_t array_size);
+void LCD_PrintTextSection(const Text *texts, uint16_t array_size);
 
 /*******************************************************************************
  * Function Name  : LCD_Write_Data_Only
@@ -425,7 +425,7 @@ uint16_t TP_ReadY();
  * Return         : int index
  * Attention      : None
  *******************************************************************************/
-int TP_CheckForSectionPress(Point point, Rectangle* rectangles, uint16_t array_size);
+int TP_CheckForSectionPress(Point point, const Rectangle* rectangles, uint16_t array_size);
 
 //////////////////////////END OF PUBLIC FUNCTION PROTOTYPES//////////////////////////
 
