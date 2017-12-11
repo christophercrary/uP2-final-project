@@ -45,6 +45,10 @@
 #define LCD_TEXT_HEIGHT     16
 #define LCD_TEXT_COLOR      LCD_BLACK
 
+/* ASCII defines */
+#define LF                  10      // line feed
+#define CR                  13      // carriage return
+
 /* defined color palette */
 #define MUPHONE_HOME_SCREEN_BACKGROUND_COLOR                    LCD_BLACK
 #define MUPHONE_HEADER_BAR_COLOR                                LCD_BLACK

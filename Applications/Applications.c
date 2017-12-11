@@ -105,7 +105,6 @@ void thread_receive_data()
 
         if(phone.header_data.intended_app == MUMESSAGE)
         {
-
             G8RTOS_add_thread( thread_receive_message_data, 20, "Receive Message");
         }
         else if(phone.header_data.intended_app == PONG)

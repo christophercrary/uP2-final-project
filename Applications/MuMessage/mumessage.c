@@ -763,18 +763,20 @@ static uint8_t keyboard;     // 4 possible keyboards (0-3) (IMPLEMENT BITFIELDS)
 // switching to numbers/symbols keyboard
 static uint8_t lowercase_uppercase;     // 2 possible choices (0 for lowercase, 1 for uppercase) (IMPLEMENT BITFIELDS)
 
-// private count of number of unread (new) messages
-static uint16_t unread_message_count;
-
-// array used to store current message being composed
-static uint8_t current_message[512];
 
 // index used to keep track of current character index in currently composed message
 static uint16_t current_message_index = 0;
 
+// current message being composed
+//static Message_Data_t message_data;
+
 /************************* END OF COMPOSE MESSAGE MEMBERS **************************/
 
-// global message log
+// private count of number of unread (new) messages
+static uint16_t unread_message_count;
+
+// message log
+//static Message_Log_t message_log[MAX_NUMBER_OF_CONTACTS];
 
 //////////////////////////END OF PRIVATE DATA MEMBERS////////////////////////////////
 
@@ -793,27 +795,63 @@ static inline void insert_character(uint8_t character)
 {
     // IMPLEMENT: insert semaphore for cursor
 
-    if  ((cursor.x < COMPOSE_MESSAGE_CURSOR_X_MAX) &&
-        (cursor.y < COMPOSE_MESSAGE_CURSOR_Y_MAX))
+    if (cursor.x < COMPOSE_MESSAGE_CURSOR_X_MAX)
     {
+        message_data.message[current_message_index++] = character;       // update current message
+
+        message_data.header_info.size_of_data++;    // increment number of bytes to send
+
         // the only way to successfully write back a character after deleting a character
         // fucking beats Brit and I (QUESTION)
-        LCD_DrawRectangle(cursor.x, (cursor.x + LCD_TEXT_WIDTH), cursor.y,
-                         (cursor.y + LCD_TEXT_HEIGHT), LCD_WHITE);
+        LCD_DrawRectangle(cursor.x, (cursor.x + LCD_TEXT_WIDTH), TEXT_ARENA_Y_MIN+2,
+                         (TEXT_ARENA_Y_MIN+2 + LCD_TEXT_HEIGHT), LCD_WHITE);
 
-        LCD_PutChar(cursor.x, cursor.y, character, LCD_TEXT_COLOR);
+        LCD_PutChar(cursor.x, TEXT_ARENA_Y_MIN+2, character, LCD_TEXT_COLOR);
         cursor.x += LCD_TEXT_WIDTH;
     }
+    else if (cursor.y < COMPOSE_MESSAGE_CURSOR_Y_MAX)       // if new-lines can be created
+    {
+        // create soft new-line (add vertical tab)
+        message_data.message[current_message_index++] = VT;
 
-    mu_message.message_data.new_message[index_of_message_row] = character; //put character in data structure
-    //update indexes of data structure
+        message_data.header_info.size_of_data++;    // increment number of bytes to send
 
-        if(index_of_message_row != MESSAGE_MAX_NUM_OF_CHARACTERS)
-        {
-            index_of_message_row++; //increment y index
-            mu_message.message_data.header_info.size_of_data++; //increment number of bytes to send
+        // place cursor at the beginning of next line
+        cursor.x = COMPOSE_MESSAGE_CURSOR_X_MIN;
+        cursor.y += LCD_TEXT_HEIGHT;
 
-        }
+        // wipe current line of text arena
+        LCD_DrawSection(section_text_arena,
+                        (sizeof(section_text_arena)/sizeof(section_text_arena[0])));
+    }
+
+    return;
+}
+
+/************************************************************************************
+* Name: insert_new_line
+* Purpose: Helper function to insert a new line (carriage return followed by a line
+*          feed) in currently composed message
+* Output: N/A
+************************************************************************************/
+static inline void insert_new_line(void)
+{
+    // IMPLEMENT: insert semaphore for cursor
+    if (cursor.y < COMPOSE_MESSAGE_CURSOR_Y_MAX)
+    {
+        // insert carriage return and line feed into current message char array
+        message_data.message[current_message_index++] = CR;
+        message_data.message[current_message_index++] = LF;
+
+        message_data.header_info.size_of_data += 2;    // increment number of bytes to send
+
+        // wipe current line of text arena
+        LCD_DrawSection(section_text_arena,
+                        (sizeof(section_text_arena)/sizeof(section_text_arena[0])));
+
+        cursor.x = COMPOSE_MESSAGE_CURSOR_X_MIN;
+        cursor.y += LCD_TEXT_HEIGHT;
+    }
     return;
 }
 
@@ -827,36 +865,77 @@ static inline void delete_character()
 {
     // IMPLEMENT: insert semaphore for cursor (for blinking)
 
-    // check bounds for cursor
-    if ((cursor.x > COMPOSE_MESSAGE_CURSOR_X_MIN) &&
-        (cursor.y >= COMPOSE_MESSAGE_CURSOR_Y_MIN))
+    // check if any previously typed characters exist
+    if (cursor.x > COMPOSE_MESSAGE_CURSOR_X_MIN ||
+        cursor.y > COMPOSE_MESSAGE_CURSOR_Y_MIN)
     {
-    // erase previous character from text arena
-    LCD_DrawRectangle((cursor.x - LCD_TEXT_WIDTH), cursor.x, cursor.y,
-                      (cursor.y + LCD_TEXT_HEIGHT), LCD_WHITE);
+        // erase previous character from text arena
+        LCD_DrawRectangle((cursor.x - LCD_TEXT_WIDTH), cursor.x, TEXT_ARENA_Y_MIN+2,
+                          (TEXT_ARENA_Y_MIN+2 + LCD_TEXT_HEIGHT), LCD_WHITE);
 
-    cursor.x -= LCD_TEXT_WIDTH;
+        cursor.x -= LCD_TEXT_WIDTH;
 
-
-    }
-
-    //update indexes
-    mu_message.message_data.new_message[index_of_message_row] = 0;
-
-
-        if(index_of_message_row != 0)
+        /* check if previously entered character was new line (forced or vertical tab) */
+        if ((message_data.message[current_message_index-1] == LF) ||     // guaranteed that LF follows CR
+            (message_data.message[current_message_index-1] == VT))
         {
-            index_of_message_row--; //decrement y index
-            mu_message.message_data.header_info.size_of_data--; //decrement number of bytes to send
+            if (message_data.message[current_message_index-1] == LF)
+            {
+                // remove forced new line
+                message_data.message[--current_message_index] = 0x00;
+                message_data.message[--current_message_index] = 0x00;
 
+                message_data.header_info.size_of_data -= 2;    // decrement number of bytes to send by 2
+
+            }
+            else        // current_message[current_message_index-1] = VT
+            {
+                // remove soft new line
+                message_data.message[--current_message_index] = 0x00;
+                message_data.header_info.size_of_data--;    // decrement number of bytes to send
+            }
+
+            /* display previous line of text on text arena */
+
+            // place cursor at the beginning of previous line
+            cursor.x = COMPOSE_MESSAGE_CURSOR_X_MIN;
+            cursor.y -= LCD_TEXT_HEIGHT;
+
+            /* two cases:
+             * 1. the previous line either wrapped due to excessive characters (VT)
+             * 2. the previous line wrapped due to a forced return (CR, LF)
+             */
+
+            uint16_t temp_index = current_message_index;        // used to traverse message
+
+            // loop until one of the above mentioned cases are met
+            while ((temp_index > 0) && (message_data.message[temp_index] != LF) && (current_message[temp_index] != VT))
+            {
+                temp_index--;
+            }
+
+            // handle edge case in which while loop above was broken by temp_index equaling 0
+            if (temp_index > 0)
+            {
+                temp_index = temp_index + 1;        // this is to avoid printing out line feed or vertical tab
+            }
+
+            // print previous line of text
+            for (uint16_t i = temp_index; i < current_message_index; i++)
+            {
+                // prevent LCD glitch
+                LCD_DrawRectangle(cursor.x, (cursor.x + LCD_TEXT_WIDTH), TEXT_ARENA_Y_MIN+2,
+                                 (TEXT_ARENA_Y_MIN+2 + LCD_TEXT_HEIGHT), LCD_WHITE);
+
+                LCD_PutChar(cursor.x, TEXT_ARENA_Y_MIN+2, message_data.message[i], LCD_TEXT_COLOR);
+                cursor.x += LCD_TEXT_WIDTH;
+            }
         }
-        else
+        else        // otherwise, erase single character from currently composed message
         {
-            //dont do shit
+            message_data.message[--current_message_index] = 0x00;
+            message_data.header_info.size_of_data--;    // decrement number of bytes to send
         }
-
-
-
 
     return;
 }
@@ -883,11 +962,11 @@ static inline void delete_character_wait()
 * Output: N/A
 * NOTE: This inline functions waits and signals semaphore_CC3100
 ************************************************************************************/
-static inline void send_message(Board_Type_t host_or_client)
+static inline void send_message(Board_Type_t board_type, Intended_Recipient_t contact)
 {
 
     uint32_t ip_address;
-    if(host_or_client == Host)
+    if(board_type == Host)
     {
         //send message to host from client
          ip_address = HOST_IP_ADDR;
@@ -899,28 +978,24 @@ static inline void send_message(Board_Type_t host_or_client)
         ip_address = client1.IP_address; //CURRENTLY ONLY FOR FIRST CLIENT IMPLEMENT OTHER CLIENT LATER
     }
 
-//    uint8_t intended_data = MUMESSAGE;
+    // end message by appending ETX (end of text, 3)
+    message_data.message[current_message_index] = 3;
+  
     G8RTOS_semaphore_wait(&semaphore_CC3100);
 
-    SendData((uint8_t*)&mu_message.message_data.header_info, ip_address, sizeof(mu_message.message_data.header_info));
-    SendData((uint8_t*)&mu_message.message_data.new_message[0], ip_address, (mu_message.message_data.header_info.size_of_data));
+    SendData((uint8_t*)&message_data.header_info, ip_address, sizeof(message_data.header_info));
+    SendData((uint8_t*)&message_data.message[contact], ip_address, (message_data.header_info.size_of_data));
 
     G8RTOS_semaphore_signal(&semaphore_CC3100);
 
-    uint32_t count = 0;
-    //message has now been sent, need to update the message log
-    for(int i = 0; i < NUMBER_OF_ROWS_OF_TEXT * NUMBER_OF_CHARS_PER_ROW;i++)
+    // message has now been sent, need to update the global message log
+    for(int i = 0; i < message.data.header_info.size_of_data; i++)
     {
-          mu_message.old_messages.contact_message_history[0].old_messages[mu_message.old_messages.number_of_strings][i]
-                                                = mu_message.message_data.new_message[i];
-          if(count == phone.header_data.size_of_data)
-          {
-              break;
-          }
-          count++;
+        old_messages.message_history[current_number_of_messages].old_message[i] = message_data.message[i];
     }
 
-    mu_message.old_messages.contact_message_history[0].message_status[mu_message.old_messages.number_of_strings++] = SENT;
+    // mark message as sent
+    message_log[contact].message_history[current_number_of_messages].message_status[current_number_of_messages++] = SENT;
 }
 
 //////////////////////////////END OF PRIVATE FUNCTIONS///////////////////////////////
@@ -1005,11 +1080,11 @@ void thread_mumessage_background_processes(void)
     // initialize unread_message_count_str with initial value
     sprintf(unread_message_notification, "%u New Messages", previous_unread_message_count);
 
-    time_t t = time(NULL);
-    struct tm tm = *localtime(&t);
-    char teststring[19];
-
-    sprintf(teststring, "%d-%d-%d %d:%d:%d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+//    time_t t = time(NULL);
+//    struct tm tm = *localtime(&t);
+//    char teststring[19];
+//
+//    sprintf(teststring, "%d-%d-%d %d:%d:%d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 
     // local Rectangle structure, used to update notifications in header bar (used to wipe previous notification)
     Rectangle section_unread_message_notification =
@@ -1026,22 +1101,22 @@ void thread_mumessage_background_processes(void)
      .string = unread_message_notification, .color = MUPHONE_HEADER_BAR_NOTIFICATION_TEXT_COLOR
     };
 
-    // local Rectangle structure, used to update clock in header bar (used to wipe previous clock time)
-    // IMPLEMENT: MOVE TO MUPHONE.C
-    Rectangle section_clock =
-    {
-     .xMin = MUPHONE_HEADER_BAR_CLOCK_PANEL_X_MIN, .xMax = MUPHONE_HEADER_BAR_CLOCK_PANEL_X_MAX,
-     .yMin = MUPHONE_HEADER_BAR_CLOCK_PANEL_Y_MIN, .yMax = MUPHONE_HEADER_BAR_CLOCK_PANEL_Y_MAX,
-     .color = MUPHONE_HEADER_BAR_COLOR
-    };
-
-    // local Text structure, used to print clock in header bar
-    // IMPLMENT: MOVE TO MUPHONE.C
-    Text text_section_clock =
-    {
-     .xStart = MUPHONE_HEADER_BAR_CLOCK_TEXT_X_START, .yStart = MUPHONE_HEADER_BAR_CLOCK_TEXT_Y_START,
-     .string = teststring, .color = MUPHONE_HEADER_BAR_NOTIFICATION_TEXT_COLOR
-    };
+//    // local Rectangle structure, used to update clock in header bar (used to wipe previous clock time)
+//    // IMPLEMENT: MOVE TO MUPHONE.C
+//    Rectangle section_clock =
+//    {
+//     .xMin = MUPHONE_HEADER_BAR_CLOCK_PANEL_X_MIN, .xMax = MUPHONE_HEADER_BAR_CLOCK_PANEL_X_MAX,
+//     .yMin = MUPHONE_HEADER_BAR_CLOCK_PANEL_Y_MIN, .yMax = MUPHONE_HEADER_BAR_CLOCK_PANEL_Y_MAX,
+//     .color = MUPHONE_HEADER_BAR_COLOR
+//    };
+//
+//    // local Text structure, used to print clock in header bar
+//    // IMPLMENT: MOVE TO MUPHONE.C
+//    Text text_section_clock =
+//    {
+//     .xStart = MUPHONE_HEADER_BAR_CLOCK_TEXT_X_START, .yStart = MUPHONE_HEADER_BAR_CLOCK_TEXT_Y_START,
+//     .string = teststring, .color = MUPHONE_HEADER_BAR_NOTIFICATION_TEXT_COLOR
+//    };
 
     // write initial notification status
     LCD_DrawRectangleStructure(section_unread_message_notification);
@@ -1049,9 +1124,9 @@ void thread_mumessage_background_processes(void)
     // print updated unread message notification
     LCD_PrintTextStructure(text_section_unread_message_notification);
 
-    // write initial clock
-    LCD_DrawRectangleStructure(section_clock);
-    LCD_PrintTextStructure(text_section_clock);
+//    // write initial clock
+//    LCD_DrawRectangleStructure(section_clock);
+//    LCD_PrintTextStructure(text_section_clock);
 
 
     while(1)
@@ -1191,20 +1266,22 @@ void thread_mumessage_compose_message_check_TP(void)
 
     if (index == SEND_BUTTON_INDEX)     // send button was pressed
     {
+
+
+
+        /* test code */
         unread_message_count++;     // TESTING new message notification
-
-//        if(phone.board_type == Client)
-//        {
-//            send_message(Host);     //send message to the host if this phone is a client         
-              G8RTOS_thread_sleep(400);
-
-//        }
-//        else if(phone.board_type == Host)
-//        {
-//            send_message(Client);
-              G8RTOS_thread_sleep(400);
-
-//        }
+      
+        if(phone.board_type == Client)
+        {
+            send_message(Host);     //send message to the host if this phone is a client
+            G8RTOS_thread_sleep(400);
+        }
+        else if(phone.board_type == Host)
+        {
+            send_message(Client);
+            G8RTOS_thread_sleep(400);
+        }
     }
 
     // check if touch interacted with keyboard currently displayed
@@ -1261,7 +1338,7 @@ void thread_mumessage_compose_message_check_TP(void)
                 }
                 else if (index == ALPHABET_KEYBOARD_RETURN_INDEX)       // if user wants to move to new line within text arena
                 {
-                    //insert_new_line();
+                    insert_new_line();
                 }
                 else        // otherwise, output respective ASCII character
                 {
@@ -1337,7 +1414,7 @@ void thread_mumessage_compose_message_check_TP(void)
                 }
                 else if (index == ALPHABET_KEYBOARD_RETURN_INDEX)       // if user wants to move to new line within text arena
                 {
-                    //insert_new_line();
+                    insert_new_line();
                 }
                 else        // otherwise, output respective ASCII character
                 {
@@ -1427,7 +1504,7 @@ void thread_mumessage_compose_message_check_TP(void)
                 }
                 else if (index == NUMBERS_SYMBOLS_KEYBOARD_RETURN_INDEX)       // if user wants to move to new line within text arena
                 {
-                    //insert_new_line();
+                    insert_new_line();
                 }
                 else        // otherwise, output respective ASCII character
                 {
@@ -1626,7 +1703,7 @@ void thread_mumessage_compose_message_check_TP(void)
                 }
                 else if (index == NUMBERS_SYMBOLS_KEYBOARD_RETURN_INDEX)       // if user wants to move to new line within text arena
                 {
-                    //insert_new_line();
+                    insert_new_line();
                 }
                 else        // otherwise, output respective ASCII character
                 {
@@ -1655,7 +1732,7 @@ void thread_mumessage_compose_message_check_TP(void)
     }
 
     // debounce LCD TouchPanel (IMPLEMENT: THIS NEEDS ITS OWN THREAD)
-    G8RTOS_thread_sleep(TENTH_SECOND_MS);
+    G8RTOS_thread_sleep(TWO_TENTHS_SECOND_MS);
 
     // re-enable LCD Touch Panel interrupt and clear interrupt flag
     GPIO_enableInterrupt(GPIO_PORT_P4, GPIO_PIN0);
