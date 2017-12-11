@@ -1279,6 +1279,8 @@
 #define KEYBOARD4_RETURN_BUTTON_TEXT_Y_START       (KEYBOARD4_RETURN_BUTTON_Y_MIN + KEYBOARD_BUTTON_BIGGER_TEXT_Y_OFFSET)
 
 
+#define MESSAGE_MAX_NUM_OF_CHARACTERS               256
+
 /************************* END OF COMPOSE MESSAGE DEFINES **************************/
 
 
@@ -1296,6 +1298,7 @@ typedef struct
 {
     Header_Data_t header_info;
     char message[MESSAGE_MAX_NUMBER_OF_CHARACTERS];
+    Intended_Recipient_t contact;
 }Message_Data_t;
 
 
@@ -1316,6 +1319,7 @@ Message_Data_t message_data;
 
 // message log
 Message_Log_t message_log[MAX_NUMBER_OF_CONTACTS];
+
 
 //////////////////////////END OF PUBLIC DATA MEMBERS/////////////////////////////////
 

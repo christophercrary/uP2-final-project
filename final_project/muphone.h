@@ -21,6 +21,19 @@
 #ifndef MUPHONE_H_
 #define MUPHONE_H_
 
+//defines for home screen apps
+#define MU_MESSAGE_APP_X_START        50
+#define MU_MESSAGE_APP_X_END          100
+#define MU_MESSAGE_APP_Y_START        50
+#define MU_MESSAGE_APP_Y_END          100
+#define MU_MESSAGE_APP_SIZE           (MU_MESSAGE_APP_X_END-MU_MESSAGE_APP_X_START)
+
+#define PONG_APP_X_START               200
+#define PONG_APP_X_END                 250
+#define PONG_APP_Y_START                50
+#define PONG_APP_Y_END                 100
+#define PONG_APP_SIZE               (PONG_APP_X_END-PONG_APP_X_START)
+
 /* boundaries for LCD screen */
 #define LCD_SCREEN_X_MIN 0
 #define LCD_SCREEN_X_MAX 320
@@ -69,6 +82,7 @@
 #define MUPHONE_HEADER_BAR_CLOCK_TEXT_Y_OFFSET       2
 #define MUPHONE_HEADER_BAR_CLOCK_TEXT_X_START        (MUPHONE_HEADER_BAR_CLOCK_PANEL_X_MIN + MUPHONE_HEADER_BAR_CLOCK_TEXT_X_OFFSET)
 #define MUPHONE_HEADER_BAR_CLOCK_TEXT_Y_START        (MUPHONE_HEADER_BAR_CLOCK_PANEL_Y_MIN + MUPHONE_HEADER_BAR_CLOCK_TEXT_Y_OFFSET)
+
 ////////////////////////////////END OF DEFINES///////////////////////////////////////
 
 ////////////////////////////////////EXTERNS//////////////////////////////////////////

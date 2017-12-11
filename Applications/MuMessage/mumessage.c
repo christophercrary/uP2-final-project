@@ -782,6 +782,9 @@ static uint16_t unread_message_count;
 
 /////////////////////////////////PRIVATE FUNCTIONS///////////////////////////////////
 
+
+
+
 /************************************************************************************
 * Name: insert_character
 * Purpose: Helper function to insert an ASCII character from a given cursor position
@@ -805,7 +808,6 @@ static inline void insert_character(uint8_t character)
 
         LCD_PutChar(cursor.x, TEXT_ARENA_Y_MIN+2, character, LCD_TEXT_COLOR);
         cursor.x += LCD_TEXT_WIDTH;
-
     }
     else if (cursor.y < COMPOSE_MESSAGE_CURSOR_Y_MAX)       // if new-lines can be created
     {
@@ -850,7 +852,6 @@ static inline void insert_new_line(void)
         cursor.x = COMPOSE_MESSAGE_CURSOR_X_MIN;
         cursor.y += LCD_TEXT_HEIGHT;
     }
-
     return;
 }
 
@@ -891,7 +892,6 @@ static inline void delete_character()
             {
                 // remove soft new line
                 message_data.message[--current_message_index] = 0x00;
-
                 message_data.header_info.size_of_data--;    // decrement number of bytes to send
             }
 
@@ -930,16 +930,12 @@ static inline void delete_character()
                 LCD_PutChar(cursor.x, TEXT_ARENA_Y_MIN+2, message_data.message[i], LCD_TEXT_COLOR);
                 cursor.x += LCD_TEXT_WIDTH;
             }
-
         }
         else        // otherwise, erase single character from currently composed message
         {
             message_data.message[--current_message_index] = 0x00;
-
             message_data.header_info.size_of_data--;    // decrement number of bytes to send
         }
-
-    }
 
     return;
 }
@@ -984,7 +980,7 @@ static inline void send_message(Board_Type_t board_type, Intended_Recipient_t co
 
     // end message by appending ETX (end of text, 3)
     message_data.message[current_message_index] = 3;
-
+  
     G8RTOS_semaphore_wait(&semaphore_CC3100);
 
     SendData((uint8_t*)&message_data.header_info, ip_address, sizeof(message_data.header_info));
@@ -1201,7 +1197,7 @@ void thread_mumessage_compose_message(void)
 
     // initialize keyboard to keyboard #1 (keyboard = 0)
     keyboard = 0;
-
+    phone.current_app = HOME_SCREEN;
     /* draw Compose Message screen visuals */
 
     LCD_DrawSection(section_compose_message_background,
@@ -1228,18 +1224,14 @@ void thread_mumessage_compose_message(void)
     LCD_PrintTextSection(text_section_keyboard1_no_click,
                            (sizeof(text_section_keyboard1_no_click)/sizeof(text_section_keyboard1_no_click[0])));
 
-    index_of_message_row = 0;
-    index_of_message_col = 0; //for data structure
 
-    mu_message.old_messages.row_index = 0;
-    mu_message.old_messages.col_index = 0;
-    mu_message.message_data.header_info.intended_app = MUMESSAGE;
-    mu_message.message_data.header_info.size_of_data = 0; //initialize size to send to zero
     /* add the necessary aperiodic thread for touches made to the LCD TouchPanel */
     G8RTOS_add_aperiodic_thread(aperiodic_mumessage_compose_message, PORT4_IRQn, 6);
 
-    //G8RTOS_add_thread(thread_receive_data, 50, "receiveData"); CHRIS COMMENT, UNCOMMENT FOR WIFI APPLICATION
+    G8RTOS_add_thread(thread_receive_data, 50, "receiveData"); //CHRIS COMMENT, UNCOMMENT FOR WIFI APPLICATION
 
+
+    phone.current_app = MUMESSAGE;
 
     G8RTOS_kill_current_thread();
 
@@ -1267,6 +1259,7 @@ void thread_mumessage_compose_message_check_TP(void)
         //IMPLEMENT
     }
 
+
     // check if touch interacted with 'Send' button
     index = TP_CheckForSectionPress( touch, section_compose_message_header_buttons,
                                      (sizeof(section_compose_message_header_buttons)/sizeof(section_compose_message_header_buttons[0])));
@@ -1278,17 +1271,16 @@ void thread_mumessage_compose_message_check_TP(void)
 
         /* test code */
         unread_message_count++;     // TESTING new message notification
-
-
-
-
+      
         if(phone.board_type == Client)
         {
             send_message(Host);     //send message to the host if this phone is a client
+            G8RTOS_thread_sleep(400);
         }
         else if(phone.board_type == Host)
         {
             send_message(Client);
+            G8RTOS_thread_sleep(400);
         }
     }
 
@@ -1820,8 +1812,43 @@ void thread_receive_message_data()
 {
     G8RTOS_semaphore_wait(&semaphore_CC3100);
 
-    ReceiveData((uint8_t*)&mu_message.message_data.new_message[0], sizeof(mu_message.message_data.new_message[0]));
-    G8RTOS_semaphore_signal(&semaphore_CC3100);
+    ReceiveData((uint8_t*)&mu_message.message_data.new_message[0], phone.header_data.size_of_data);
+
+    G8RTOS_semaphore_signal(&semaphore_CC3100);            //do something
+
+   // if (mu_message.message_data.contact == phone.self_contact)
+    //{
+        //message has now been sent, need to update the message log
+        uint32_t index = 0;
+        for (int i = 0; i < NUMBER_OF_ROWS_OF_TEXT * NUMBER_OF_CHARS_PER_ROW; i++)
+        {
+            mu_message.old_messages.contact_message_history[0].old_messages[mu_message.old_messages.number_of_strings][i] =
+                    mu_message.message_data.new_message[i];
+            if (index == phone.header_data.size_of_data)
+            {
+                break;
+            }
+            index++;
+
+        }
+
+        mu_message.old_messages.contact_message_history[0].message_status[mu_message.old_messages.number_of_strings++] =
+                RECEIVED;
+
+        phone.message_received++;
+    //}
+    /*
+    else
+    {
+        //send data to correct client
+        G8RTOS_semaphore_wait(&semaphore_CC3100);
+
+        send_message(Client); //send to other client
+        G8RTOS_semaphore_signal(&semaphore_CC3100);            //do something
+
+    }
+
+*/
 
     G8RTOS_kill_current_thread(); //kill thread
 }
