@@ -6,12 +6,11 @@
 #include "G8RTOS.h"
 
 semaphore_t semaphore_CC3100;          // used to access CC3100 WiFi chip
-
+uint16_t count1 = 0;
+uint16_t count2 = 0;
+int16_t send_again = -5;
 
 /*
- *
- *
- *
  * NOTE:    The board with Chris' data MUST BE connected to the host first. Then Wes. This ensures that the contact data is valid, I.E. Wes wont be chris
  *          and chris wont be wes (not a fatal error but for sending messages to the correct contact will be important)
  */
@@ -29,16 +28,45 @@ void thread_init_host_wifi()
      client1.hasAcknowledged = true;
      SendData((uint8_t*)&client1.hasAcknowledged, client1.IP_address, sizeof(client1.hasAcknowledged));
 
- /*
+
      //establish connection with client2
 
      //CLIENT2 NEEDS TO BE WES
+     //SendData((uint8_t*)&client1.hasAcknowledged, client2.IP_address, sizeof(client1.hasAcknowledged));
+
      while(ReceiveData((uint8_t*)&client2, sizeof(client2)) < 0);
 
      client2.hasAcknowledged = true;
-     SendData((uint8_t*)&client2.hasAcknowledged, client2.IP_address, sizeof(client2.hasAcknowledged));
+   //  SendData((uint8_t*)&client2.hasAcknowledged, client2.IP_address, sizeof(client2.hasAcknowledged));
+     SendData((uint8_t*)&client2.hasAcknowledged, client2.IP_address, sizeof(client2.hasAcknowledged)); //send client1 info to client2
 
-*/
+
+     //both clients have communicated with the host.
+
+     SendData((uint8_t*)&client2, client1.IP_address, sizeof(client2)); //send client2 to client1
+
+      count1 = 0;
+
+     client1.hasAcknowledged = false;
+     while(!client1.hasAcknowledged)
+     {
+         while(ReceiveData((uint8_t*)&client1.hasAcknowledged, sizeof(client1.hasAcknowledged)) < 0);
+         count1++;
+
+
+     }
+
+
+     SendData((uint8_t*)&client1, client2.IP_address, sizeof(client1)); //send client2 to client1
+     client2.hasAcknowledged = false;
+     while(!client2.hasAcknowledged)
+     {
+         while(ReceiveData((uint8_t*)&client2.hasAcknowledged, sizeof(client2.hasAcknowledged)) < 0);
+         count2++;
+
+     }
+
+
      // light up led to show WiFi connection
      P2->DIR |= (BIT0); //make p2.0 an output
      P2->OUT |= (BIT0);
@@ -56,6 +84,7 @@ void thread_init_client_wifi()
 
     initCC3100(Client); //initialize CC3100 as the client
 
+  /*
     client1.IP_address = getLocalIP(); //give client an IP
 
 
@@ -73,7 +102,67 @@ void thread_init_client_wifi()
     }
     phone.IP_address = client1.IP_address;
 
+    client1.hasAcknowledged = false;
   //  G8RTOS_add_thread(thread_receive_data, 50, "Receive data");
+*/
+
+
+
+//if chris' board, need to wait for acknowlege from Host that all boards are ready (since chris' board is the second board to be connected)
+   if(phone.self_contact == CHRIS)
+   {
+       client1.IP_address = getLocalIP();
+       SendData((uint8_t *)&client1, HOST_IP_ADDR, sizeof(client1));
+
+
+       while(ReceiveData((uint8_t*)&client1.hasAcknowledged, sizeof(client1.hasAcknowledged)) < 0);
+       if(client1.hasAcknowledged)
+       {
+           //do something to show connection
+           while(ReceiveData((uint8_t*)&client2, sizeof(client2)) < 0); //get client2 info
+
+           client1.hasAcknowledged = true;
+           SendData((uint8_t *)&client1.hasAcknowledged, HOST_IP_ADDR, sizeof(client1.hasAcknowledged));
+
+
+       }
+       else
+       {
+           while(ReceiveData((uint8_t*)&client1.hasAcknowledged, sizeof(client1.hasAcknowledged)) < 0);
+       }
+
+   }
+
+   else if(phone.self_contact == WES)
+   {
+       client2.IP_address = getLocalIP();
+
+     //  while(ReceiveData((uint8_t*)&client2.hasAcknowledged, sizeof(client2.hasAcknowledged)) < 0);
+
+
+       SendData((uint8_t *)&client2, HOST_IP_ADDR, sizeof(client2));
+
+       while(ReceiveData((uint8_t*)&client2.hasAcknowledged, sizeof(client2.hasAcknowledged)) < 0);
+       if(client2.hasAcknowledged)
+       {
+           //do something to show connection
+         //  while(ReceiveData((uint8_t*)&client1, sizeof(client1)) < 0); //get client1 info
+          // client2.hasAcknowledged = true;
+           //SendData((uint8_t *)&client2.hasAcknowledged, HOST_IP_ADDR, sizeof(client2.hasAcknowledged));
+
+           while(ReceiveData((uint8_t*)&client1, sizeof(client1)) < 0); //get client2 info
+
+           client2.hasAcknowledged = true;
+           SendData((uint8_t *)&client2.hasAcknowledged, HOST_IP_ADDR, sizeof(client2.hasAcknowledged));
+
+       }
+       else
+       {
+           while(ReceiveData((uint8_t*)&client1, sizeof(client1)) < 0);
+       }
+
+   }
+
 
     G8RTOS_kill_current_thread();
 
@@ -97,7 +186,7 @@ void thread_receive_data()
         }
         else if(phone.current_app == MUMESSAGE)
         {
-            sleep_time = 100;
+            sleep_time = 50;
         }
         else if(phone.current_app == PONG)
         {

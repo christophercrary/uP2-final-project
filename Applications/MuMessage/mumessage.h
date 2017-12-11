@@ -1306,8 +1306,8 @@ typedef struct
 typedef struct
 {
     Header_Data_t header_info;
-    char message[MESSAGE_MAX_NUMBER_OF_CHARACTERS];
     Contact_Data_t to_and_from;
+    char message[MESSAGE_MAX_NUMBER_OF_CHARACTERS];
 
 }Message_Data_t;
 
@@ -1315,7 +1315,7 @@ typedef struct
 typedef struct
 {
     char old_message[MESSAGE_MAX_NUMBER_OF_CHARACTERS];         // for conversations screen, hold old messages (probably will run into memory issues)
-    Message_Status_t message_status[MAX_NUMBER_OF_MESSAGES];
+    Message_Status_t message_status;
 }Old_Messages_t;
 
 typedef struct

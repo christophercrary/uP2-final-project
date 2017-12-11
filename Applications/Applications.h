@@ -53,10 +53,6 @@ typedef playerType Board_Type_t;
 typedef struct
 {
     uint32_t IP_address;    // client's dynamically chosen IP address
-    //int16_t displacement;   // for pong
-    //playerNumber_t player;        // used to identify player number
-    //bool isReady;           // ???
-    //bool hasJoined;
     bool hasAcknowledged;
 }GeneralClientInfo_t;
 

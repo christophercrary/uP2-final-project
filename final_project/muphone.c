@@ -75,11 +75,19 @@ static inline void muphone_init(void)
     // MuMessage background processes
     G8RTOS_add_thread(thread_mumessage_background_processes, 150, "mumessage - b.p.");
     G8RTOS_add_thread(thread_mumessage_compose_message, 180, "compose message");
+     G8RTOS_add_thread(thread_mumessage_start_app, 29, "start mumessage");
+
+
+    //for all apps
+    G8RTOS_add_thread(thread_receive_data, 40, "receiveData");
+
 
     G8RTOS_semaphore_init(&semaphore_CC3100, 1);
 
-    phone.board_type = Host;
-   // phone.board_type = Client;
+    phone.self_contact = BRIT;
+    //phone.self_contact = CHRIS;
+   // phone.self_contact = WES;
+
     phone.current_app = HOME_SCREEN;
 
 
@@ -95,25 +103,32 @@ static inline void muphone_init(void)
     P4->IE |= BIT4; //enable bit 4 interrupt
     leds_init();
 
-    if(phone.board_type == Host)
+    if(phone.self_contact == BRIT)
     {
         G8RTOS_add_thread(thread_init_host_wifi, 30, "initHostWifi");
-        phone.self_contact = BRIT;
+        phone.board_type = Host;
 
     }
-    else
+    else if(phone.self_contact == CHRIS)
     {
         //client
        G8RTOS_add_thread(thread_init_client_wifi, 30, "initClientWifi");
-      // phone.self_contact = CHRIS;
-       phone.self_contact = WES;
+       phone.board_type = Client;
+    }
+    else if(phone.self_contact == WES)
+    {
+        G8RTOS_add_thread(thread_init_client_wifi, 30, "initClientWifi");
+        phone.board_type = Client;
+
+    }
+
+    //testing pong
+    if(phone.self_contact == BRIT || phone.self_contact == CHRIS)
+    {
+      //  G8RTOS_add_thread(thread_start_game, 40, "Start Game");
     }
 
 
-   // G8RTOS_add_thread(thread_start_game, 40, "Start Game");
-
-    G8RTOS_add_thread(thread_mumessage_start_app, 29, "start mumessage");
-    G8RTOS_add_thread(thread_receive_data, 40, "receiveData");
 
     // launch the operating system
     G8RTOS_launch();
