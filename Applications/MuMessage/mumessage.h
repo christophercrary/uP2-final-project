@@ -1294,11 +1294,21 @@
 
 //message data
 
+typedef Intended_Recipient_t Self_Contact_t;
+
+typedef struct
+{
+    Self_Contact_t contact_of_sender; //contact of the board sending data
+    Intended_Recipient_t contact; //contact the board sending data is trying to send data to
+}Contact_Data_t;
+
+
 typedef struct
 {
     Header_Data_t header_info;
     char message[MESSAGE_MAX_NUMBER_OF_CHARACTERS];
-    Intended_Recipient_t contact;
+    Contact_Data_t to_and_from;
+
 }Message_Data_t;
 
 

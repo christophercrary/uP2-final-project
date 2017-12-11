@@ -30,7 +30,7 @@ typedef enum{
     CHRIS = 0,
     BRIT = 1,
     WES = 2,
-    MILES = 3
+ //   MILES = 3
 }Intended_Recipient_t;
 
 typedef Intended_Recipient_t Owner_Of_Board;

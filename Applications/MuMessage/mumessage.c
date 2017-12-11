@@ -966,16 +966,21 @@ static inline void send_message(Board_Type_t board_type, Intended_Recipient_t co
 {
 
     uint32_t ip_address;
-    if(board_type == Host)
+    if(contact == BRIT)
     {
+        //BRIT WILL ALWAYS BE HOST
         //send message to host from client
          ip_address = HOST_IP_ADDR;
     }
 
-    else
+    else if(contact == CHRIS)
     {
         //sending data from host to client
         ip_address = client1.IP_address; //CURRENTLY ONLY FOR FIRST CLIENT IMPLEMENT OTHER CLIENT LATER
+    }
+    else if(contact == WES)
+    {
+        ip_address = client2.IP_address;
     }
 
     // end message by appending ETX (end of text, 3)
@@ -983,8 +988,9 @@ static inline void send_message(Board_Type_t board_type, Intended_Recipient_t co
   
     G8RTOS_semaphore_wait(&semaphore_CC3100);
 
-    SendData((uint8_t*)&message_data.header_info, ip_address, sizeof(message_data.header_info));
-    SendData((uint8_t*)&message_data.message[contact], ip_address, (message_data.header_info.size_of_data));
+    SendData((uint8_t*)&message_data.header_info, ip_address, sizeof(message_data.header_info)); //send header info
+    SendData((uint8_t*)&message_data.to_and_from, ip_address, sizeof(message_data.to_and_from)); //send contact information (who I am trying to communicate with and who I am)
+    SendData((uint8_t*)&message_data.message[contact], ip_address, (message_data.header_info.size_of_data)); //send actual message
 
     G8RTOS_semaphore_signal(&semaphore_CC3100);
 
@@ -997,6 +1003,52 @@ static inline void send_message(Board_Type_t board_type, Intended_Recipient_t co
     // mark message as sent
     message_log[contact].message_history[message_log[contact].current_number_of_messages].message_status[message_log[contact].current_number_of_messages++] = SENT;
 }
+
+
+
+/************************************************************************************
+* Name: Pass_Message_Along
+* Purpose: Helper function to send message to client when a client is trying to communicate with another client
+* Input(s): Board_Type_t that defines who the message is meant to be sent to, contact is who the baord is trying to communicate with,
+*           buffer is the data to be sent, and buffer_size is the size of the buffer
+* Output: N/A
+* NOTE: This inline functions waits and signals semaphore_CC3100
+************************************************************************************/
+static inline void Pass_Message_Along(Board_Type_t board_type, Intended_Recipient_t contact, char buffer[] , uint32_t buffer_size)
+{
+    uint32_t ip_address;
+    if(contact == BRIT)
+    {
+        //BRIT WILL ALWAYS BE HOST
+        //send message to host from client
+         ip_address = HOST_IP_ADDR;
+    }
+
+    else if(contact == CHRIS)
+    {
+        //sending data from host to client
+        ip_address = client1.IP_address; //CURRENTLY ONLY FOR FIRST CLIENT IMPLEMENT OTHER CLIENT LATER
+    }
+    else if(contact == WES)
+    {
+        ip_address = client2.IP_address;
+    }
+
+    // end message by appending ETX (end of text, 3)
+    message_data.message[current_message_index] = 3;
+
+    G8RTOS_semaphore_wait(&semaphore_CC3100);
+
+    SendData((uint8_t*)&message_data.header_info, ip_address, sizeof(message_data.header_info)); //send header info
+    SendData((uint8_t*)&message_data.to_and_from, ip_address, sizeof(message_data.to_and_from)); //send contact information (who I am trying to communicate with and who I am)
+    SendData((uint8_t*)&buffer, ip_address, buffer_size); //send actual message
+
+    G8RTOS_semaphore_signal(&semaphore_CC3100);
+
+    //DO NOT LOG THIS MESSAGE, WAS NOT MEANT FOR THE HOST TO RECEIVE
+}
+
+
 
 //////////////////////////////END OF PRIVATE FUNCTIONS///////////////////////////////
 
@@ -1228,9 +1280,6 @@ void thread_mumessage_compose_message(void)
     /* add the necessary aperiodic thread for touches made to the LCD TouchPanel */
     G8RTOS_add_aperiodic_thread(aperiodic_mumessage_compose_message, PORT4_IRQn, 6);
 
-    G8RTOS_add_thread(thread_receive_data, 50, "receiveData"); //CHRIS COMMENT, UNCOMMENT FOR WIFI APPLICATION
-
-
     phone.current_app = MUMESSAGE;
 
     G8RTOS_kill_current_thread();
@@ -1267,19 +1316,19 @@ void thread_mumessage_compose_message_check_TP(void)
     if (index == SEND_BUTTON_INDEX)     // send button was pressed
     {
 
-
-
-        /* test code */
-        unread_message_count++;     // TESTING new message notification
-      
-        if(phone.board_type == Client)
+        if(phone.self_contact == BRIT)
         {
-            send_message(Host, CHRIS);     //send message to the host if this phone is a client
+            send_message(Client, message_data.to_and_from.contact);     //send data to client board (chris or wes)
             G8RTOS_thread_sleep(400);
         }
-        else if(phone.board_type == Host)
+        else if(phone.self_contact == CHRIS)
         {
-            send_message(Client, BRIT);
+            send_message(Host, message_data.to_and_from.contact); //send data to host
+            G8RTOS_thread_sleep(400);
+        }
+        else if(phone.self_contact == WES)
+        {
+            send_message(Host, message_data.to_and_from.contact); //send data to host
             G8RTOS_thread_sleep(400);
         }
     }
@@ -1785,6 +1834,23 @@ void thread_mumessage_start_app(void)
     message_data.header_info.size_of_data = 0; //initialize size to send to zero
     phone.message_received = 0;
 
+    if(phone.self_contact == BRIT)
+    {
+        message_data.to_and_from.contact = CHRIS; //talk to chris for now
+        message_data.to_and_from.contact_of_sender = BRIT;
+    }
+    else if(phone.self_contact == CHRIS)
+    {
+        message_data.to_and_from.contact = BRIT; //talk to host
+        message_data.to_and_from.contact_of_sender = CHRIS;
+    }
+    else if(phone.self_contact == WES)
+    {
+        message_data.to_and_from.contact = BRIT; //talk to host
+        message_data.to_and_from.contact_of_sender = WES;
+    }
+
+
     // initialize each contact's current number of messages
     for (uint8_t i = 0; i < MAX_NUMBER_OF_CONTACTS; i++)
     {
@@ -1823,38 +1889,67 @@ void thread_send_message_data()
 //should just run once, then
 void thread_receive_message_data()
 {
+
+    Contact_Data_t temp_contacts;
+    char temp_buffer[MESSAGE_MAX_NUM_OF_CHARACTERS]; //temporary buffer to store received data before logging it into trusty ol' message
     G8RTOS_semaphore_wait(&semaphore_CC3100);
 
-    ReceiveData((uint8_t*)&message_data.message[0], phone.header_data.size_of_data);
+    ReceiveData((uint8_t*)&temp_contacts, sizeof(temp_contacts));
+    ReceiveData((uint8_t*)&temp_buffer, phone.header_data.size_of_data);
 
+    G8RTOS_semaphore_signal(&semaphore_CC3100);            //do something
+
+ /*
+    if(temp_contacts.contact != phone.self_contact)
+    {
+
+        //send data to correct client
+        G8RTOS_semaphore_wait(&semaphore_CC3100);
+        if(temp_contacts.contact == CHRIS)
+        {
+            Pass_Message_Along(Client, CHRIS, temp_buffer, sizeof(temp_buffer));
+
+           // send_message(Client, WES); //send to other client
+
+        }
+        else if(temp_contacts.contact == WES)
+        {
+            Pass_Message_Along(Client, WES, temp_buffer, sizeof(temp_buffer));
+
+           // send_message(Client, CHRIS); //send to other client
+
+        }
+
+        G8RTOS_semaphore_signal(&semaphore_CC3100);            //do something
+    }
+
+*/
     // update MuMessage's header byte info
     message_data.header_info.size_of_data = phone.header_data.size_of_data;
 
-    G8RTOS_semaphore_signal(&semaphore_CC3100);            //do something
 
     // message has now been sent, need to update the global message log
     for(int i = 0; i < message_data.header_info.size_of_data; i++)
     {
-        message_log[0].message_history[message_log[0].current_number_of_messages].old_message[i] = message_data.message[i];
+        message_log[temp_contacts.contact_of_sender].message_history[message_log[temp_contacts.contact_of_sender].current_number_of_messages].old_message[i] = temp_buffer[i];
     }
 
     // mark message as sent
-    message_log[0].message_history[message_log[0].current_number_of_messages].message_status[message_log[0].current_number_of_messages++] = RECEIVED;
+    message_log[temp_contacts.contact_of_sender].message_history[message_log[temp_contacts.contact_of_sender].current_number_of_messages].message_status[message_log[temp_contacts.contact_of_sender].current_number_of_messages++] = RECEIVED;
+
+
+    unread_message_count++;     // TESTING new message notification, need to reset if click on message log
 
     //phone.message_received++;
     //}
-    /*
-    else
-    {
-        //send data to correct client
-        G8RTOS_semaphore_wait(&semaphore_CC3100);
 
-        send_message(Client); //send to other client
-        G8RTOS_semaphore_signal(&semaphore_CC3100);            //do something
 
-    }
 
-*/
+
+
+
+
+
 
     G8RTOS_kill_current_thread(); //kill thread
 }

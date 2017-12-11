@@ -78,8 +78,8 @@ static inline void muphone_init(void)
 
     G8RTOS_semaphore_init(&semaphore_CC3100, 1);
 
-     phone.board_type = Host;
-    //phone.board_type = Client;
+    phone.board_type = Host;
+   // phone.board_type = Client;
     phone.current_app = HOME_SCREEN;
 
 
@@ -99,19 +99,20 @@ static inline void muphone_init(void)
     {
         G8RTOS_add_thread(thread_init_host_wifi, 30, "initHostWifi");
         phone.self_contact = BRIT;
+
     }
     else
     {
         //client
        G8RTOS_add_thread(thread_init_client_wifi, 30, "initClientWifi");
-       phone.self_contact = CHRIS;
-     //  phone.self_contact = WES;
+      // phone.self_contact = CHRIS;
+       phone.self_contact = WES;
     }
 
 
    // G8RTOS_add_thread(thread_start_game, 40, "Start Game");
 
-    G8RTOS_add_thread(thread_mumessage_start_app, 30, "start mumessage");
+    G8RTOS_add_thread(thread_mumessage_start_app, 29, "start mumessage");
     G8RTOS_add_thread(thread_receive_data, 40, "receiveData");
 
     // launch the operating system
