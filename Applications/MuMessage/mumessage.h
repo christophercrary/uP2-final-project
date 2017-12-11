@@ -1314,13 +1314,6 @@ typedef struct
     uint32_t current_number_of_messages;
 }Message_Log_t;
 
-// current message being composed
-Message_Data_t message_data;
-
-// message log
-Message_Log_t message_log[MAX_NUMBER_OF_CONTACTS];
-
-
 //////////////////////////END OF PUBLIC DATA MEMBERS/////////////////////////////////
 
 //////////////////////////////PRIVATE DATA MEMBERS///////////////////////////////////

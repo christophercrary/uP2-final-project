@@ -21,6 +21,9 @@
 #ifndef MUPHONE_H_
 #define MUPHONE_H_
 
+// fuck this
+#define MAX_NUMBER_OF_CONTACTS      3
+
 //defines for home screen apps
 #define MU_MESSAGE_APP_X_START        50
 #define MU_MESSAGE_APP_X_END          100

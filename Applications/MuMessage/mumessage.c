@@ -768,7 +768,7 @@ static uint8_t lowercase_uppercase;     // 2 possible choices (0 for lowercase, 
 static uint16_t current_message_index = 0;
 
 // current message being composed
-//static Message_Data_t message_data;
+static Message_Data_t message_data;
 
 /************************* END OF COMPOSE MESSAGE MEMBERS **************************/
 
@@ -776,7 +776,7 @@ static uint16_t current_message_index = 0;
 static uint16_t unread_message_count;
 
 // message log
-//static Message_Log_t message_log[MAX_NUMBER_OF_CONTACTS];
+static Message_Log_t message_log[MAX_NUMBER_OF_CONTACTS];
 
 //////////////////////////END OF PRIVATE DATA MEMBERS////////////////////////////////
 
@@ -909,7 +909,7 @@ static inline void delete_character()
             uint16_t temp_index = current_message_index;        // used to traverse message
 
             // loop until one of the above mentioned cases are met
-            while ((temp_index > 0) && (message_data.message[temp_index] != LF) && (current_message[temp_index] != VT))
+            while ((temp_index > 0) && (message_data.message[temp_index] != LF) && (message_data.message[temp_index] != VT))
             {
                 temp_index--;
             }
@@ -936,7 +936,7 @@ static inline void delete_character()
             message_data.message[--current_message_index] = 0x00;
             message_data.header_info.size_of_data--;    // decrement number of bytes to send
         }
-
+    }
     return;
 }
 
@@ -989,13 +989,13 @@ static inline void send_message(Board_Type_t board_type, Intended_Recipient_t co
     G8RTOS_semaphore_signal(&semaphore_CC3100);
 
     // message has now been sent, need to update the global message log
-    for(int i = 0; i < message.data.header_info.size_of_data; i++)
+    for(int i = 0; i < message_data.header_info.size_of_data; i++)
     {
-        old_messages.message_history[current_number_of_messages].old_message[i] = message_data.message[i];
+        message_log[contact].message_history[message_log[contact].current_number_of_messages].old_message[i] = message_data.message[i];
     }
 
     // mark message as sent
-    message_log[contact].message_history[current_number_of_messages].message_status[current_number_of_messages++] = SENT;
+    message_log[contact].message_history[message_log[contact].current_number_of_messages].message_status[message_log[contact].current_number_of_messages++] = SENT;
 }
 
 //////////////////////////////END OF PRIVATE FUNCTIONS///////////////////////////////
@@ -1274,12 +1274,12 @@ void thread_mumessage_compose_message_check_TP(void)
       
         if(phone.board_type == Client)
         {
-            send_message(Host);     //send message to the host if this phone is a client
+            send_message(Host, CHRIS);     //send message to the host if this phone is a client
             G8RTOS_thread_sleep(400);
         }
         else if(phone.board_type == Host)
         {
-            send_message(Client);
+            send_message(Client, BRIT);
             G8RTOS_thread_sleep(400);
         }
     }
@@ -1780,6 +1780,19 @@ void thread_mumessage_start_app(void)
 {
 
     // initialize application instance
+
+    message_data.header_info.intended_app = MUMESSAGE;
+    message_data.header_info.size_of_data = 0; //initialize size to send to zero
+    phone.message_received = 0;
+
+    // initialize each contact's current number of messages
+    for (uint8_t i = 0; i < MAX_NUMBER_OF_CONTACTS; i++)
+    {
+        message_log[i].current_number_of_messages = 0;
+    }
+    //message data should already be initialized to zero
+
+    G8RTOS_kill_current_thread();
 }
 
 
@@ -1812,30 +1825,23 @@ void thread_receive_message_data()
 {
     G8RTOS_semaphore_wait(&semaphore_CC3100);
 
-    ReceiveData((uint8_t*)&mu_message.message_data.new_message[0], phone.header_data.size_of_data);
+    ReceiveData((uint8_t*)&message_data.message[0], phone.header_data.size_of_data);
+
+    // update MuMessage's header byte info
+    message_data.header_info.size_of_data = phone.header_data.size_of_data;
 
     G8RTOS_semaphore_signal(&semaphore_CC3100);            //do something
 
-   // if (mu_message.message_data.contact == phone.self_contact)
-    //{
-        //message has now been sent, need to update the message log
-        uint32_t index = 0;
-        for (int i = 0; i < NUMBER_OF_ROWS_OF_TEXT * NUMBER_OF_CHARS_PER_ROW; i++)
-        {
-            mu_message.old_messages.contact_message_history[0].old_messages[mu_message.old_messages.number_of_strings][i] =
-                    mu_message.message_data.new_message[i];
-            if (index == phone.header_data.size_of_data)
-            {
-                break;
-            }
-            index++;
+    // message has now been sent, need to update the global message log
+    for(int i = 0; i < message_data.header_info.size_of_data; i++)
+    {
+        message_log[0].message_history[message_log[0].current_number_of_messages].old_message[i] = message_data.message[i];
+    }
 
-        }
+    // mark message as sent
+    message_log[0].message_history[message_log[0].current_number_of_messages].message_status[message_log[0].current_number_of_messages++] = RECEIVED;
 
-        mu_message.old_messages.contact_message_history[0].message_status[mu_message.old_messages.number_of_strings++] =
-                RECEIVED;
-
-        phone.message_received++;
+    //phone.message_received++;
     //}
     /*
     else
