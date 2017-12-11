@@ -788,8 +788,7 @@ static inline void insert_character(uint8_t character)
 {
     // IMPLEMENT: insert semaphore for cursor
 
-    if  (character != 0 &&
-        (cursor.x < COMPOSE_MESSAGE_CURSOR_X_MAX) &&
+    if  ((cursor.x < COMPOSE_MESSAGE_CURSOR_X_MAX) &&
         (cursor.y < COMPOSE_MESSAGE_CURSOR_Y_MAX))
     {
         // the only way to successfully write back a character after deleting a character
@@ -801,23 +800,15 @@ static inline void insert_character(uint8_t character)
         cursor.x += LCD_TEXT_WIDTH;
     }
 
-    mu_message.message_data.new_message[index_of_message_row][index_of_message_col] = character; //put character in data structure
+    mu_message.message_data.new_message[index_of_message_row] = character; //put character in data structure
     //update indexes of data structure
-    if(index_of_message_col != NUMBER_OF_CHARS_PER_ROW - 1)
-    {
-          index_of_message_col++;
-          mu_message.message_data.header_info.size_of_data++; //increment number of bytes to send
-    }
-    else
-    {
-        if(index_of_message_row != NUMBER_OF_ROWS_OF_TEXT - 1)
+
+        if(index_of_message_row != MESSAGE_MAX_NUM_OF_CHARACTERS)
         {
             index_of_message_row++; //increment y index
-            index_of_message_col = 0; //reset x index
             mu_message.message_data.header_info.size_of_data++; //increment number of bytes to send
 
         }
-    }
     return;
 }
 
@@ -845,14 +836,12 @@ static inline void delete_character()
     }
 
     //update indexes
-    mu_message.message_data.new_message[index_of_message_row][index_of_message_col] = 0;
+    mu_message.message_data.new_message[index_of_message_row] = 0;
 
-    if(index_of_message_col == 0)
-    {
+
         if(index_of_message_row != 0)
         {
             index_of_message_row--; //decrement y index
-            index_of_message_col = NUMBER_OF_CHARS_PER_ROW - 1; //set x to max value
             mu_message.message_data.header_info.size_of_data--; //decrement number of bytes to send
 
         }
@@ -861,13 +850,8 @@ static inline void delete_character()
             //dont do shit
         }
 
-    }
-    else
-    {
-        index_of_message_col--;
-        mu_message.message_data.header_info.size_of_data--; //decrement number of bytes to send
 
-    }
+
 
     return;
 }
@@ -910,9 +894,6 @@ static inline void send_message(Board_Type_t host_or_client)
         ip_address = client1.IP_address; //CURRENTLY ONLY FOR FIRST CLIENT IMPLEMENT OTHER CLIENT LATER
     }
 
-    //append a zero to data
-   // insert_character(0); //null between sent messages
-
 //    uint8_t intended_data = MUMESSAGE;
     G8RTOS_semaphore_wait(&semaphore_CC3100);
 
@@ -923,28 +904,17 @@ static inline void send_message(Board_Type_t host_or_client)
 
     uint32_t count = 0;
     //message has now been sent, need to update the message log
-    for(int i = 0; i<NUMBER_OF_ROWS_OF_TEXT;i++)
+    for(int i = 0; i < NUMBER_OF_ROWS_OF_TEXT * NUMBER_OF_CHARS_PER_ROW;i++)
     {
-
-        for(int j = 0; j < NUMBER_OF_CHARS_PER_ROW;j++)
-        {
-
-          mu_message.old_messages.contact_message_history[0].old_messages[mu_message.old_messages.row_index][mu_message.old_messages.col_index++]
-                                                = mu_message.message_data.new_message[i][j];
-          if(count == mu_message.message_data.header_info.size_of_data)
-             {
-                 break;
-             }
-          count++;
-
-        }
-
-        if(count == mu_message.message_data.header_info.size_of_data)
+          mu_message.old_messages.contact_message_history[0].old_messages[mu_message.old_messages.number_of_strings][i]
+                                                = mu_message.message_data.new_message[i];
+          if(count == phone.header_data.size_of_data)
           {
-               break;
+              break;
           }
-        mu_message.old_messages.row_index++;
+          count++;
     }
+
     mu_message.old_messages.contact_message_history[0].message_status[mu_message.old_messages.number_of_strings++] = SENT;
 }
 
@@ -1025,7 +995,7 @@ void thread_mumessage_compose_message(void)
 
     // initialize keyboard to keyboard #1 (keyboard = 0)
     keyboard = 0;
-
+    phone.current_app = HOME_SCREEN;
     /* draw Compose Message screen visuals */
 
     LCD_DrawSection(section_compose_message_background,
@@ -1059,6 +1029,8 @@ void thread_mumessage_compose_message(void)
     G8RTOS_add_thread(thread_receive_data, 50, "receiveData"); //CHRIS COMMENT, UNCOMMENT FOR WIFI APPLICATION
 
 
+    phone.current_app = MUMESSAGE;
+
     G8RTOS_kill_current_thread();
 
 }
@@ -1088,7 +1060,6 @@ void thread_mumessage_compose_message_check_TP(void)
     if(index == -1)
     {
             //check bounds of touch
-            //this indentation is really gonna piss chris off lol
         if(     touch.x >= COMPOSE_MESSAGE_SEND_BUTTON_X_MIN
            &&   touch.x <= COMPOSE_MESSAGE_SEND_BUTTON_X_MAX
            &&   touch.y >= COMPOSE_MESSAGE_SEND_BUTTON_Y_MIN
@@ -1099,10 +1070,12 @@ void thread_mumessage_compose_message_check_TP(void)
             if(phone.board_type == Client)
             {
                 send_message(Host); //send message to the host if this phone is a client
+                G8RTOS_thread_sleep(400);
             }
             else if(phone.board_type == Host)
             {
                 send_message(Client);
+                G8RTOS_thread_sleep(400);
             }
 
         }
@@ -1640,35 +1613,40 @@ void thread_receive_message_data()
     ReceiveData((uint8_t*)&mu_message.message_data.new_message[0], phone.header_data.size_of_data);
 
     G8RTOS_semaphore_signal(&semaphore_CC3100);            //do something
-    //message has now been sent, need to update the message log
-    uint32_t index = 0;
-    for(int i = 0; i < NUMBER_OF_ROWS_OF_TEXT;i++)
-    {
 
-        for(int j = 0; j < NUMBER_OF_CHARS_PER_ROW;j++)
+   // if (mu_message.message_data.contact == phone.self_contact)
+    //{
+        //message has now been sent, need to update the message log
+        uint32_t index = 0;
+        for (int i = 0; i < NUMBER_OF_ROWS_OF_TEXT * NUMBER_OF_CHARS_PER_ROW; i++)
         {
-
-          mu_message.old_messages.contact_message_history[0].old_messages[mu_message.old_messages.row_index][mu_message.old_messages.col_index++]
-                                                = mu_message.message_data.new_message[i][j];
-          if(index == phone.header_data.size_of_data)
-          {
-              break;
-          }
-          index++;
+            mu_message.old_messages.contact_message_history[0].old_messages[mu_message.old_messages.number_of_strings][i] =
+                    mu_message.message_data.new_message[i];
+            if (index == phone.header_data.size_of_data)
+            {
+                break;
+            }
+            index++;
 
         }
-     if(index == phone.header_data.size_of_data)
-       {
-              break;
-       }
 
-        mu_message.old_messages.row_index++;
+        mu_message.old_messages.contact_message_history[0].message_status[mu_message.old_messages.number_of_strings++] =
+                RECEIVED;
+
+        phone.message_received++;
+    //}
+    /*
+    else
+    {
+        //send data to correct client
+        G8RTOS_semaphore_wait(&semaphore_CC3100);
+
+        send_message(Client); //send to other client
+        G8RTOS_semaphore_signal(&semaphore_CC3100);            //do something
+
     }
 
-
-    mu_message.old_messages.contact_message_history[0].message_status[mu_message.old_messages.number_of_strings++] = RECEIVED;
-
-    phone.message_received++;
+*/
 
     G8RTOS_kill_current_thread(); //kill thread
 }

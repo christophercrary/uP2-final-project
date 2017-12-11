@@ -1252,6 +1252,8 @@
 #define KEYBOARD4_RETURN_BUTTON_TEXT_Y_START       (KEYBOARD4_RETURN_BUTTON_Y_MIN + KEYBOARD_BUTTON_BIGGER_TEXT_Y_OFFSET)
 
 
+#define MESSAGE_MAX_NUM_OF_CHARACTERS               256
+
 /************************* END OF COMPOSE MESSAGE DEFINES **************************/
 
 
@@ -1268,15 +1270,16 @@
 typedef struct
 {
     Header_Data_t header_info;
-    char new_message[NUMBER_OF_ROWS_OF_TEXT][NUMBER_OF_CHARS_PER_ROW]; //NEED to set everything to zero, although pretty sure its done automatically
-    uint8_t end_of_text; //this variable is to determine that the text has been transmitted in full to another board
+    Intended_Recipient_t contact;
+    char new_message[NUMBER_OF_ROWS_OF_TEXT*NUMBER_OF_CHARS_PER_ROW]; //NEED to set everything to zero, although pretty sure its done automatically
+
 
 }Message_Data_t;
 
 
 typedef struct
 {
-    char old_messages[NUMBER_OF_ROWS_OF_TEXT* MAX_NUMBER_OF_MESSAGES][NUMBER_OF_CHARS_PER_ROW]; //for conversations screen, hold old messages (probably will run into memory issues)
+    char old_messages[MAX_NUMBER_OF_MESSAGES][NUMBER_OF_CHARS_PER_ROW*NUMBER_OF_ROWS_OF_TEXT]; //for conversations screen, hold old messages (probably will run into memory issues)
     Message_Status_t message_status[MAX_NUMBER_OF_MESSAGES];
 
 }Old_Messages_t;
@@ -1285,7 +1288,7 @@ typedef struct
 {
     Old_Messages_t contact_message_history[NUMBER_OF_CONTACTS];
     uint32_t row_index;
-    uint32_t col_index;
+   // uint32_t col_index;
     uint32_t number_of_strings;
 }Message_Log_t;
 
@@ -1301,7 +1304,7 @@ typedef struct
 
 MuMessage_t mu_message;
 uint32_t index_of_message_row; //indexes for global data structure for new messages
-uint32_t index_of_message_col;
+//uint32_t index_of_message_col;
 
 //////////////////////////END OF PUBLIC DATA MEMBERS/////////////////////////////////
 

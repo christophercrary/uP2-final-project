@@ -182,7 +182,7 @@ typedef struct
 /*
  * Struct to be sent from the client to the host
  */
-/*
+
 typedef struct
 {
     uint32_t IP_address;    // client's dynamically chosen IP address
@@ -192,7 +192,7 @@ typedef struct
     bool hasJoined;
     bool hasAcknowledged;
 }ClientInfo_t;
-*/
+
 /*
  * Player's (paddle) info to be used by both host and client
  * Client responsible for translation (???)

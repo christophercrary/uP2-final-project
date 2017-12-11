@@ -7,23 +7,30 @@
 
 semaphore_t semaphore_CC3100;          // used to access CC3100 WiFi chip
 
-//this thread is used to setup certain shared aspects across applications (currently just wifi)
 void thread_init_host_wifi()
 {
     initCC3100(Host); //initialize CC3100 as the host
 
+    //establish connection with client1
      // establish connection with client
      while(ReceiveData((uint8_t*)&client1, sizeof(client1)) < 0);
-
-     // light up led to show WiFi connection
-     P2->DIR |= (BIT0); //make p2.0 an output
-     P2->OUT |= (BIT0);
 
      client1.hasAcknowledged = true;
      SendData((uint8_t*)&client1.hasAcknowledged, client1.IP_address, sizeof(client1.hasAcknowledged));
 
-     //G8RTOS_add_thread(thread_receive_data, 50, "Receive data");
+     //establish connection with client2
+/*
+     while(ReceiveData((uint8_t*)&client2, sizeof(client2)) < 0);
 
+     client2.hasAcknowledged = true;
+     SendData((uint8_t*)&client1.hasAcknowledged, client1.IP_address, sizeof(client1.hasAcknowledged));
+*/
+     // light up led to show WiFi connection
+     P2->DIR |= (BIT0); //make p2.0 an output
+     P2->OUT |= (BIT0);
+
+     //G8RTOS_add_thread(thread_receive_data, 50, "Receive data");
+     phone.IP_address = HOST_IP_ADDR;
 
      G8RTOS_kill_current_thread();
 
@@ -50,8 +57,10 @@ void thread_init_client_wifi()
         P2->DIR |= (BIT0); //make p2.0 an output
         P2->OUT |= (BIT0);
     }
+    phone.IP_address = client1.IP_address;
 
   //  G8RTOS_add_thread(thread_receive_data, 50, "Receive data");
+
     G8RTOS_kill_current_thread();
 
 }
@@ -70,7 +79,7 @@ void thread_receive_data()
     {
         if(phone.current_app == HOME_SCREEN)
         {
-            sleep_time = 100; //100 ms sleep time
+            sleep_time = 2000; //500 ms sleep time
         }
         else if(phone.current_app == MUMESSAGE)
         {
@@ -78,7 +87,7 @@ void thread_receive_data()
         }
         else if(phone.current_app == PONG)
         {
-            sleep_time = 5; //5 ms
+            sleep_time = 3; //5 ms
         }
 
 
@@ -89,28 +98,34 @@ void thread_receive_data()
          {
              //for reading data till a nonzero value is returned
              G8RTOS_semaphore_signal(&semaphore_CC3100);
-             G8RTOS_thread_sleep(1); //sleep for 1ms to avoid deadlock
+             G8RTOS_thread_sleep(sleep_time); //sleep for 1ms to avoid deadlock
              G8RTOS_semaphore_wait(&semaphore_CC3100);
           }
         G8RTOS_semaphore_signal(&semaphore_CC3100);
 
         if(phone.header_data.intended_app == MUMESSAGE)
         {
+
             G8RTOS_add_thread( thread_receive_message_data, 20, "Receive Message");
         }
         else if(phone.header_data.intended_app == PONG)
         {
-           // G8RTOS_add_thread(thread_receive_pong_data, 10, "pong_data");
-            //do something
-
-            G8RTOS_semaphore_wait(&semaphore_CC3100);
-
-           // ReceiveData((uint8_t*)&rand, sizeof(rand));
-            G8RTOS_semaphore_signal(&semaphore_CC3100);
+           if(phone.board_type == Host)
+           {
+               //receive thread for host
+              // G8RTOS_add_thread(ReceiveDataFromClient, 20 ,"ReceiveFromClient");
+               ReceiveDataFromClient();
+           }
+           else
+           {
+               //receive thread for client
+               //G8RTOS_add_thread(ReceiveDataFromHost, 20 ,"ReceiveFromHost");
+               ReceiveDataFromHost();
+           }
 
         }
 
-        G8RTOS_thread_sleep(100); //sleep 5 ms
+        G8RTOS_thread_sleep(sleep_time); //sleep 5 ms
     }
 
 

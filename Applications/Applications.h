@@ -20,10 +20,19 @@ typedef enum{
 } Intended_Data_t;
 
 typedef enum{
-
     SENT = 0,
     RECEIVED = 1
 }Message_Status_t;
+
+
+typedef enum{
+    CHRIS = 0,
+    BRIT = 1,
+    WES = 2,
+    MILES = 3
+}Intended_Recipient_t;
+
+typedef Intended_Recipient_t Owner_Of_Board;
 
 
 typedef struct{
@@ -43,10 +52,12 @@ typedef playerType Board_Type_t;
 typedef struct
 {
     uint32_t IP_address;    // client's dynamically chosen IP address
-    bool isReady;
-    bool hasJoined;
+    //int16_t displacement;   // for pong
+    //playerNumber_t player;        // used to identify player number
+    //bool isReady;           // ???
+    //bool hasJoined;
     bool hasAcknowledged;
-}ClientInfo_t;
+}GeneralClientInfo_t;
 
 //host IP address is a define
 
@@ -58,15 +69,16 @@ typedef struct
     Board_Type_t board_type; //host or client
     Header_Data_t header_data; //variable that determines who the data is for
     uint8_t message_received; //will hold the amount of messages received
-
     uint32_t IP_address; //Self's IP address
+
+    Intended_Recipient_t self_contact; //boards own contact
 
 }Phone_t;
 
 //global variables
 Phone_t phone; //everything will probably be ran through this data structure
-ClientInfo_t client1;
-ClientInfo_t client2;
+GeneralClientInfo_t client1;
+GeneralClientInfo_t client2;
 
 /*************** Thread declarations *****************/
 
