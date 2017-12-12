@@ -1280,7 +1280,7 @@
 
 
 #define MESSAGE_MAX_NUM_OF_CHARACTERS               256
-
+#define PIN_TOUCHPANEL                              0
 /************************* END OF COMPOSE MESSAGE DEFINES **************************/
 
 

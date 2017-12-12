@@ -15,7 +15,8 @@ typedef enum{
 
     HOME_SCREEN = 0,
     MUMESSAGE = 1,
-    PONG = 2
+    PONG = 2,
+    BALLS = 3
 
 } Intended_Data_t;
 

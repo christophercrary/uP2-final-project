@@ -13,7 +13,7 @@
 #include "Applications.h"
 #include "pong.h"       // pong game application
 #include "time.h"
-
+#include "DrawStuff.h"
 // IMPLEMENT OTHER APPLICATIONS
 
 /////////////////////////////END OF DEPENDENCIES/////////////////////////////////////
@@ -61,20 +61,21 @@ static inline void muphone_init(void)
     G8RTOS_init();
 
     /* draw MuPhone visuals */
-
+/*
     LCD_DrawSection(section_muphone_header_bar,
                     (sizeof(section_muphone_header_bar)/sizeof(section_muphone_header_bar[0])));
 
 //    LCD_PrintTextSection(text_section_muphone_header_bar,
 //                    (sizeof(text_section_muphone_header_bar)/sizeof(text_section_muphone_header_bar[0])));
 
-    /* add the necessary starting threads */
+    // add the necessary starting threads
     G8RTOS_add_thread(thread_muphone_idle, 200, "idle");
     //G8RTOS_add_thread(thread_start_game, 180, "pong - start");      // TEST
 
     // MuMessage background processes
     G8RTOS_add_thread(thread_mumessage_background_processes, 150, "mumessage - b.p.");
     G8RTOS_add_thread(thread_mumessage_compose_message, 180, "compose message");
+
      G8RTOS_add_thread(thread_mumessage_start_app, 29, "start mumessage");
 
 
@@ -92,11 +93,11 @@ static inline void muphone_init(void)
 
 
     //initialize pong variables
-    /* add aperiodic threads */
+    // add aperiodic threads
     P4->OUT = 0b00010000; //enable pull up resistor
     P4->REN = 0b00010000;
 
-    /* initialize button press interrupt */
+    // initialize button press interrupt
     P4->DIR &= ~BIT4; //P4 is an input
     P4->IFG &= ~BIT4;
     P4->IES |= BIT4; //set bit 4 for high to low transition
@@ -128,7 +129,12 @@ static inline void muphone_init(void)
       //  G8RTOS_add_thread(thread_start_game, 40, "Start Game");
     }
 
+*/
+   // LCD_Clear(LCD_WHITE);
 
+    G8RTOS_add_thread(thread_muphone_idle, 200, "idle");
+
+    G8RTOS_add_thread(thread_init_balls_app, 100, "Init balls");
 
     // launch the operating system
     G8RTOS_launch();

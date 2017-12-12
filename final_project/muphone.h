@@ -13,6 +13,7 @@
 #include <stdio.h>      // used for specific wrapper functions, such as sprintf
 #include "G8RTOS.h"     // RTOS used to initialize the MSP432 and control the MuPhone
 #include "BSP.h"        // used to control MSP432 device (QUESTION: is this needed??)
+#include "Balls.h"
 
 /////////////////////////////END OF DEPENDENCIES/////////////////////////////////////
 
