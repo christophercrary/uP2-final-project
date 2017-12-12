@@ -1429,7 +1429,7 @@ typedef struct
 typedef struct
 {
     char old_message[MESSAGE_MAX_NUMBER_OF_CHARACTERS];         // for conversations screen, hold old messages (probably will run into memory issues)
-    Message_Status_t message_status[MAX_NUMBER_OF_MESSAGES];
+    Message_Status_t message_status;
 }Old_Messages_t;
 
 typedef struct
