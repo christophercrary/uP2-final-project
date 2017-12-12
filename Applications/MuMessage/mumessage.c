@@ -857,7 +857,7 @@ char message2[256] =
 
 char message3[256] =
 {
- 's', 'w', 'e', 'e', 't', CR, LF, CR, LF, ETX
+ 's', 'w', 'e', 'e', 't', CR, LF, ETX
 };
 
 char message4[256] =
@@ -872,9 +872,20 @@ char message5[256] =
  'y', 'o', 'u', VT, CR, LF, VT, ETX
 };
 
-char *message_array[5] = {message1, message2, message3, message4, message5};
+char message6[256] =
+{
+ 'a', 'y', 'y', 'y', VT, CR, LF, CR, LF,
+ 'n', 'o', 't', 'h', 'i', 'n', 'g', ' ', 'm', 'u', 'c', 'h', ' ', 'm', 'a', 'n', ETX
+};
 
-uint8_t messageStatus[5] = {0, 1, 0, 1, 1};
+char message7[256] =
+{
+ 'm', 'a', 't', 'e', 'y', ETX
+};
+
+char *message_array[7] = {message1, message2, message3, message4, message5, message6, message7};
+
+uint8_t messageStatus[5] = {0, 1, 0, 1, 1, 0, 0};
 
 /************************ END OF MESSAGE LOG MEMBERS *********************************/
 
@@ -1144,6 +1155,315 @@ static inline void Pass_Message_Along(Board_Type_t board_type, Intended_Recipien
 }
 
 
+/************************************************************************************
+* Name: print_messages_up
+* Purpose: Helper function to print as many messages starting at and before
+*          the passed-in index of the global message history array
+* Input(s): IMPLEMENT: GLOBAL MESSAGE HISTORY PARAMETER, int *message_history_index
+* Output: N/A
+************************************************************************************/
+static void print_messages_up(int *message_history_index)
+{
+    /* redraw text arena */
+    LCD_DrawSection(section_message_log_text_arena,
+                    (sizeof(section_message_log_text_arena)/sizeof(section_message_log_text_arena[0])));
+
+    // variable to determine where to start printing message (from the bottom of the message)
+    // initialize to bottom of screen
+    uint8_t yPos = MESSAGE_LOG_TEXT_ARENA_Y_MAX - MESSAGE_LOG_MESSAGE_BOX_EDGE_OFFSET;
+
+    /* print as many messages can fit on screen */
+    while (*message_history_index >= 0)
+    {
+        char temp_char = NULL;
+        uint16_t index = 0;
+        uint8_t num_of_rows = 1;        // number of lines of text
+        int max_row_length = -1;        // guarantee update at least once
+        uint8_t current_row_length = 0;
+
+        // traverse message to find longest line of characters (used to determine size of message)
+        do
+        {
+            // read character from message
+            temp_char = message_array[*message_history_index][index++];
+
+            if (temp_char != ETX)        // ignore end of text characters from message
+            {
+                if (temp_char == VT)      // soft new line encountered
+                {
+                    num_of_rows++;
+
+                    // check if current line has greatest length so far
+                    if (current_row_length > max_row_length)
+                    {
+                        max_row_length = current_row_length;
+                    }
+
+                    current_row_length = 0;     // reset current row length
+                }
+                else if (temp_char == CR)      // forced new line encountered
+                {
+                    index++;        // increment past LF
+                    num_of_rows++;
+
+                    // check if current line has greatest length so far
+                    if (current_row_length > max_row_length)
+                    {
+                        max_row_length = current_row_length;
+                    }
+
+                    current_row_length = 0;     // reset current row length
+                }
+                else
+                {
+                    current_row_length++;       // increase number of characters encountered
+                }
+            }
+        }while(temp_char != ETX);       // end of text encountered
+
+        // if message was only one line or if last line was greatest length
+        if ((max_row_length == -1) || (current_row_length > max_row_length))
+        {
+            max_row_length = current_row_length;
+        }
+
+        /* check if message can fit on screen */
+        if ( (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 2) - (num_of_rows * LCD_TEXT_HEIGHT) -
+            MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET - MESSAGE_LOG_MESSAGE_BOX_EDGE_OFFSET) < MESSAGE_LOG_TEXT_ARENA_Y_MIN )
+        {
+            break;      // message cannot fit, break for loop
+        }
+
+        /* draw either sent or sent message, based on who message belongs to (IMPLEMENT) */
+
+        if (messageStatus[*message_history_index])       // if message was received
+        {
+            /* draw received message */
+
+            // draw black border around message
+            LCD_DrawRectangle(MESSAGE_LOG_MESSAGE_BOX_RECEIVED_X_MIN,
+                              ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 2) + MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET),
+                              (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 2) - (num_of_rows * LCD_TEXT_HEIGHT) - MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET),
+                              (yPos + MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET),
+                              MESSAGE_LOG_MESSAGE_BOX_BORDER_COLOR);
+
+            // draw received rectangle based on size of longest length line in text message
+            LCD_DrawRectangle(MESSAGE_LOG_MESSAGE_BOX_RECEIVED_X_MIN,
+                              ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 2)),
+                              (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 2) - (num_of_rows * LCD_TEXT_HEIGHT)), yPos,
+                              MESSAGE_LOG_MESSAGE_BOX_RECEIVED_COLOR);
+
+
+            index = 0;      // reset temporary index
+
+            // initialize a cursor at beginning of received message box
+            uint8_t x = MESSAGE_LOG_MESSAGE_RECEIVED_TEXT_X_MIN;      // used to print within message box
+            uint8_t y = (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 1) - (num_of_rows * LCD_TEXT_HEIGHT));
+
+            /* print message within received box */
+            do
+            {
+                // read character from message
+                temp_char = message_array[*message_history_index][index++];
+
+                if (temp_char != ETX)        // ignore end of text characters from message
+                {
+                    if (temp_char == VT)    // soft new line encountered
+                    {
+                        x = MESSAGE_LOG_MESSAGE_RECEIVED_TEXT_X_MIN;        // set cursor to beginning of next line
+                        y += LCD_TEXT_HEIGHT;
+                    }
+                    else if (temp_char == CR)     // forced new line encountered
+                    {
+                        index++;        // increment past LF
+
+                        x = MESSAGE_LOG_MESSAGE_RECEIVED_TEXT_X_MIN;        // set cursor to beginning of next line
+                        y += LCD_TEXT_HEIGHT;
+                    }
+                    else
+                    {
+                        LCD_PutChar(x, y, temp_char, MESSAGE_LOG_MESSAGE_TEXT_COLOR);       // place next character
+                        x += LCD_TEXT_WIDTH;        // increment cursor position
+                    }
+                }
+
+            }while(temp_char != ETX);       // end of text encountered
+
+        }
+        else        // if message was sent
+        {
+
+            /* draw sent message box */
+
+            // draw black border around message box
+            LCD_DrawRectangle((MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX - ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 2) + MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET)),
+                              MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX,
+                              (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 2) - (num_of_rows * LCD_TEXT_HEIGHT) - MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET),
+                              (yPos + MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET),
+                              MESSAGE_LOG_MESSAGE_BOX_BORDER_COLOR);
+
+            // draw sent rectangle based on size of longest length line in text message
+            LCD_DrawRectangle((MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX - ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 2))),
+                              MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX,
+                              (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 2) - (num_of_rows * LCD_TEXT_HEIGHT)),
+                              yPos,
+                              MESSAGE_LOG_MESSAGE_BOX_SENT_COLOR);
+
+            index = 0;      // reset temporary index
+
+            // IMPLEMENT depending on whether or not sent or sent
+
+            // initialize a cursor at beginning of sent message box
+            uint16_t x = (MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX - ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 1)));      // used to print within message box
+            uint8_t y = (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 1) - (num_of_rows * LCD_TEXT_HEIGHT));
+
+            /* print message within sent box */
+            do
+            {
+                // read character from message
+                temp_char = message_array[*message_history_index][index++];
+
+                if (temp_char != ETX)        // ignore end of text characters from message
+                {
+                    if (temp_char == VT)    // soft new line encountered
+                    {
+                        x = (MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX - ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 1)));        // set cursor to beginning of next line
+                        y += LCD_TEXT_HEIGHT;
+                    }
+                    else if (temp_char == CR)      // new line encountered
+                    {
+                        index++;        // increment past LF
+
+                        x = (MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX - ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 1)));        // set cursor to beginning of next line
+                        y += LCD_TEXT_HEIGHT;
+                    }
+                    else
+                    {
+                        LCD_PutChar(x, y, temp_char, MESSAGE_LOG_MESSAGE_TEXT_COLOR);       // place next character
+                        x += LCD_TEXT_WIDTH;        // increment cursor position
+                    }
+                }
+            }while(temp_char != ETX);       // end of text encountered
+        }
+
+        // update yPos to be at top of last printed message (bottom of next printable area)
+        yPos = ((yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 2) - (num_of_rows * LCD_TEXT_HEIGHT) - MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET) - MESSAGE_LOG_MESSAGE_BOX_Y_OFFSET);
+
+        if (((*message_history_index) - 1) < 0)
+        {
+            break;      // prevent edge case for indexing (save my ass for scrolling down)
+        }
+        else
+        {
+        // retrieve previous message on the next iteration
+        (*message_history_index) = (*message_history_index) - 1;
+        }
+    }
+
+    return;
+}
+
+/************************************************************************************
+* Name: print_messages_down
+* Purpose: Helper function to print as many messages starting at and after
+*          the passed-in index of the global message history array
+* Input(s): IMPLEMENT: GLOBAL MESSAGE HISTORY PARAMETER, int *message_history_index
+* Output: N/A
+************************************************************************************/
+static void print_messages_down(int *message_history_index, uint8_t total_number_of_messages)
+{
+    // counter to store number of printable messages
+    uint8_t number_of_printable_messages = 0;
+
+    // temporary index used to traverse array
+    int temp2_index = (*message_history_index);
+
+    uint8_t yPos = MESSAGE_LOG_TEXT_ARENA_Y_MIN;
+
+    // count how many messages can be printed top, down (same number as how many can be printed bottom, up)
+    // guarantee no out-of-range indexing for message log
+    while (temp2_index < total_number_of_messages - 1)
+    {
+        char temp_char = NULL;
+        uint16_t index = 0;
+        uint8_t num_of_rows = 1;        // number of lines of text
+        int max_row_length = -1;        // guarantee update at least once
+        uint8_t current_row_length = 0;
+
+        // traverse message to find longest line of characters (used to determine size of message)
+        do
+        {
+            // read character from message
+            temp_char = message_array[temp2_index][index++];
+
+            if (temp_char != ETX)        // ignore end of text characters from message
+            {
+                if (temp_char == VT)      // soft new line encountered
+                {
+                    num_of_rows++;
+
+                    // check if current line has greatest length so far
+                    if (current_row_length > max_row_length)
+                    {
+                        max_row_length = current_row_length;
+                    }
+
+                    current_row_length = 0;     // reset current row length
+                }
+                else if (temp_char == CR)      // forced new line encountered
+                {
+                    index++;        // increment past LF
+                    num_of_rows++;
+
+                    // check if current line has greatest length so far
+                    if (current_row_length > max_row_length)
+                    {
+                        max_row_length = current_row_length;
+                    }
+
+                    current_row_length = 0;     // reset current row length
+                }
+                else
+                {
+                    current_row_length++;       // increase number of characters encountered
+                }
+            }
+        }while(temp_char != ETX);       // end of text encountered
+
+        // if message was only one line or if last line was greatest length
+        if ((max_row_length == -1) || (current_row_length > max_row_length))
+        {
+            max_row_length = current_row_length;
+        }
+
+        /* check if message can fit on screen */
+        if ( (yPos + (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 2) + (num_of_rows * LCD_TEXT_HEIGHT) +
+            MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET + MESSAGE_LOG_MESSAGE_BOX_EDGE_OFFSET) > MESSAGE_LOG_TEXT_ARENA_Y_MAX )
+        {
+            break;      // message cannot fit, break for loop
+        }
+        else
+        {
+            // message can fit
+            // set yPos at bottom of current message
+            yPos = (yPos + (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 2) + (num_of_rows * LCD_TEXT_HEIGHT) +
+                   MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET + MESSAGE_LOG_MESSAGE_BOX_EDGE_OFFSET);
+        }
+
+        temp2_index++;       // move to next message in message history
+        number_of_printable_messages++;
+    }
+
+    /* increase message_history_index by that found number of messages to be printed (+1) */
+    (*message_history_index) = (*message_history_index) + number_of_printable_messages + 2;     // hacking into the mainframe
+
+    /* print messages from bottom of screen, up */
+    print_messages_up(message_history_index);       // message_history_index is already a pointer to an int
+
+
+    return;
+}
+
 
 //////////////////////////////END OF PRIVATE FUNCTIONS///////////////////////////////
 
@@ -1405,215 +1725,6 @@ void thread_mumessage_background_processes(void)
 /* threads for Compose Message */
 
 /************************************************************************************
-* Name: print_messages
-* Purpose: Helper function to print as many messages starting at and before
-*          the passed-in index of the global message history array
-* Input(s): IMPLEMENT: GLOBAL MESSAGE HISTORY PARAMETER, int *message_history_index
-* Output: N/A
-************************************************************************************/
-static void print_messages(int *message_history_index, uint8_t *number_of_messages_printed)
-{
-    // reset counter for number of messages printed
-    (*number_of_messages_printed) = 0;
-
-    /* redraw text arena */
-    LCD_DrawSection(section_message_log_text_arena,
-                    (sizeof(section_message_log_text_arena)/sizeof(section_message_log_text_arena[0])));
-
-    // variable to determine where to start printing message (from the bottom of the message)
-    // initialize to bottom of screen
-    uint8_t yPos = MESSAGE_LOG_TEXT_ARENA_Y_MAX - MESSAGE_LOG_MESSAGE_BOX_EDGE_OFFSET;
-
-    /* print as many messages can fit on screen */
-    while (*message_history_index >= 0)
-    {
-        char temp_char = NULL;
-        uint16_t index = 0;
-        uint8_t num_of_rows = 1;        // number of lines of text
-        int max_row_length = -1;        // guarantee update at least once
-        uint8_t current_row_length = 0;
-
-        // traverse message to find longest line of characters (used to determine size of message)
-        do
-        {
-            // read character from message
-            temp_char = message_array[*message_history_index][index++];
-
-            if (temp_char != ETX)        // ignore end of text characters from message
-            {
-                if (temp_char == VT)      // soft new line encountered
-                {
-                    num_of_rows++;
-
-                    // check if current line has greatest length so far
-                    if (current_row_length > max_row_length)
-                    {
-                        max_row_length = current_row_length;
-                    }
-
-                    current_row_length = 0;     // reset current row length
-                }
-                else if (temp_char == CR)      // forced new line encountered
-                {
-                    index++;        // increment past LF
-                    num_of_rows++;
-
-                    // check if current line has greatest length so far
-                    if (current_row_length > max_row_length)
-                    {
-                        max_row_length = current_row_length;
-                    }
-
-                    current_row_length = 0;     // reset current row length
-                }
-                else
-                {
-                    current_row_length++;       // increase number of characters encountered
-                }
-            }
-        }while(temp_char != ETX);       // end of text encountered
-
-        // if message was only one line or if last line was greatest length
-        if ((max_row_length == -1) || (current_row_length > max_row_length))
-        {
-            max_row_length = current_row_length;
-        }
-
-        /* check if message can fit on screen */
-        if ( (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 2) - (num_of_rows * LCD_TEXT_HEIGHT) -
-            MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET - MESSAGE_LOG_MESSAGE_BOX_EDGE_OFFSET) < MESSAGE_LOG_TEXT_ARENA_Y_MIN )
-        {
-            break;      // message cannot fit, break for loop
-        }
-
-        /* draw either sent or sent message, based on who message belongs to (IMPLEMENT) */
-
-        if (messageStatus[*message_history_index])       // if message was received
-        {
-            /* draw received message */
-
-            // draw black border around message
-            LCD_DrawRectangle(MESSAGE_LOG_MESSAGE_BOX_RECEIVED_X_MIN,
-                              ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 2) + MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET),
-                              (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 2) - (num_of_rows * LCD_TEXT_HEIGHT) - MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET),
-                              (yPos + MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET),
-                              MESSAGE_LOG_MESSAGE_BOX_BORDER_COLOR);
-
-            // draw received rectangle based on size of longest length line in text message
-            LCD_DrawRectangle(MESSAGE_LOG_MESSAGE_BOX_RECEIVED_X_MIN,
-                              ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 2)),
-                              (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 2) - (num_of_rows * LCD_TEXT_HEIGHT)), yPos,
-                              MESSAGE_LOG_MESSAGE_BOX_RECEIVED_COLOR);
-
-
-            index = 0;      // reset temporary index
-
-            // IMPLEMENT depending on whether or not received or received
-
-            // initialize a cursor at beginning of received message box
-            uint8_t x = MESSAGE_LOG_MESSAGE_RECEIVED_TEXT_X_MIN;      // used to print within message box
-            uint8_t y = (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 1) - (num_of_rows * LCD_TEXT_HEIGHT));
-
-            /* print message within received box */
-            do
-            {
-                // read character from message
-                temp_char = message_array[*message_history_index][index++];
-
-                if (temp_char != ETX)        // ignore end of text characters from message
-                {
-                    if (temp_char == VT)    // soft new line encountered
-                    {
-                        x = MESSAGE_LOG_MESSAGE_RECEIVED_TEXT_X_MIN;        // set cursor to beginning of next line
-                        y += LCD_TEXT_HEIGHT;
-                    }
-                    else if (temp_char == CR)     // forced new line encountered
-                    {
-                        index++;        // increment past LF
-
-                        x = MESSAGE_LOG_MESSAGE_RECEIVED_TEXT_X_MIN;        // set cursor to beginning of next line
-                        y += LCD_TEXT_HEIGHT;
-                    }
-                    else
-                    {
-                        LCD_PutChar(x, y, temp_char, MESSAGE_LOG_MESSAGE_TEXT_COLOR);       // place next character
-                        x += LCD_TEXT_WIDTH;        // increment cursor position
-                    }
-                }
-
-            }while(temp_char != ETX);       // end of text encountered
-
-        }
-        else        // if message was sent
-        {
-
-            /* draw sent message box */
-
-            // draw black border around message box
-            LCD_DrawRectangle((MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX - ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 2) + MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET)),
-                              MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX,
-                              (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 2) - (num_of_rows * LCD_TEXT_HEIGHT) - MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET),
-                              (yPos + MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET),
-                              MESSAGE_LOG_MESSAGE_BOX_BORDER_COLOR);
-
-            // draw sent rectangle based on size of longest length line in text message
-            LCD_DrawRectangle((MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX - ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 2))),
-                              MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX,
-                              (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 2) - (num_of_rows * LCD_TEXT_HEIGHT)),
-                              yPos,
-                              MESSAGE_LOG_MESSAGE_BOX_SENT_COLOR);
-
-            index = 0;      // reset temporary index
-
-            // IMPLEMENT depending on whether or not sent or sent
-
-            // initialize a cursor at beginning of sent message box
-            uint16_t x = (MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX - ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 1)));      // used to print within message box
-            uint8_t y = (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 1) - (num_of_rows * LCD_TEXT_HEIGHT));
-
-            /* print message within sent box */
-            do
-            {
-                // read character from message
-                temp_char = message_array[*message_history_index][index++];
-
-                if (temp_char != ETX)        // ignore end of text characters from message
-                {
-                    if (temp_char == VT)    // soft new line encountered
-                    {
-                        x = (MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX - ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 1)));        // set cursor to beginning of next line
-                        y += LCD_TEXT_HEIGHT;
-                    }
-                    else if (temp_char == CR)      // new line encountered
-                    {
-                        index++;        // increment past LF
-
-                        x = (MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX - ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 1)));        // set cursor to beginning of next line
-                        y += LCD_TEXT_HEIGHT;
-                    }
-                    else
-                    {
-                        LCD_PutChar(x, y, temp_char, MESSAGE_LOG_MESSAGE_TEXT_COLOR);       // place next character
-                        x += LCD_TEXT_WIDTH;        // increment cursor position
-                    }
-                }
-            }while(temp_char != ETX);       // end of text encountered
-        }
-
-        // update yPos to be at top of last printed message (bottom of next printable area)
-        yPos = ((yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 2) - (num_of_rows * LCD_TEXT_HEIGHT) - MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET) - MESSAGE_LOG_MESSAGE_BOX_Y_OFFSET);
-
-        // retrieve previous message on the next iteration
-        (*message_history_index) = (*message_history_index) - 1;
-
-        // increment the counter of the amount of messages printed
-        (*number_of_messages_printed) = (*number_of_messages_printed) + 1;
-    }
-
-    return;
-}
-
-/************************************************************************************
 * Name: thread_mumessage_message_log
 * Purpose: Thread to draw message log screen
 * Input(s): N/A
@@ -1640,20 +1751,11 @@ void thread_mumessage_message_log(void)
     /* add the necessary aperiodic thread for touches made to the LCD TouchPanel */
     G8RTOS_add_aperiodic_thread(aperiodic_mumessage_message_log, PORT4_IRQn, 6);
 
-    int number_of_messages = 4;     // IMPLEMENT: NUMBER OF MESSAGES IN CONTACT'S MESSAGE LOG
-    int message_history_index = number_of_messages;     // used to determine max index of message history
-    uint8_t prev_numbers_of_messages_printed[MAX_NUMBER_OF_MESSAGES];     // used to traverse down in message log (make better way eventually)
-    uint8_t print_index = 0;
-    uint8_t current_number_of_messages_printed;     // used whenever printing new screen of messages
-
-    // initialize print array (garbage)
-    for (uint8_t i = 0; i < MAX_NUMBER_OF_MESSAGES; i++)
-    {
-        prev_numbers_of_messages_printed[i] = 0;
-    }
+    int total_number_of_messages = 7;     // IMPLEMENT: NUMBER OF MESSAGES IN CONTACT'S MESSAGE LOG
+    int message_history_index = total_number_of_messages - 1;     // used to determine max index of message history
 
     /* print initial screen of message log (most current messages) */
-    print_messages(&message_history_index, &current_number_of_messages_printed);
+    print_messages_up(&message_history_index);
 
     int temp_index = message_history_index;     // used to prevent unnecessary printing of messages
 
@@ -1669,17 +1771,15 @@ void thread_mumessage_message_log(void)
 
         if ((yPos > 100) && (temp_index < message_history_index))     // traverse down in message log
         {
-            temp_index += prev_numbers_of_messages_printed[--print_index];        // this is used to avoid making another print_messages function
-            print_messages(&temp_index, &current_number_of_messages_printed);
+            print_messages_down(&temp_index, total_number_of_messages);
         }
         else if ((yPos < -100) && (temp_index >= 0))        // traverse up in message log
         {
-            prev_numbers_of_messages_printed[print_index++] = current_number_of_messages_printed + print_index + 2;
-            print_messages(&temp_index, &current_number_of_messages_printed);
+            print_messages_up(&temp_index);
         }
 
 
-        G8RTOS_thread_sleep(ONE_SECOND_MS);
+        G8RTOS_thread_sleep(HALF_SECOND_MS);
     }
 
     // IMPLEMENT: GETTING KILLED BY HITTING BACK BUTTON
@@ -1712,15 +1812,21 @@ void thread_mumessage_message_log_check_TP(void)
 
 
     // check if touch interacted with 'Back' button
-    index = TP_CheckForSectionPress( touch, section_compose_message_header_buttons,
-                                     (sizeof(section_compose_message_header_buttons)/sizeof(section_compose_message_header_buttons[0])));
+    index = TP_CheckForSectionPress( touch, section_message_log_header_buttons,
+                                     (sizeof(section_message_log_header_buttons)/sizeof(section_message_log_header_buttons[0])));
 
 
-    // check if touch interacted with back button (IMPLEMENT)
+    // check if touch interacted with back button
     if (index == BACK_BUTTON_INDEX)
     {
         //IMPLEMENT
-        // make sure to disable interrupts
+        // make sure to disable interrupts (?)
+
+        /* kill Message Log (IMPLEMENT) */
+
+        /* return to MuMessage main screen */
+        G8RTOS_add_thread(thread_mumessage_open_app, 180, "MM: open app");
+
     }
 
     // re-enable LCD Touch Panel interrupt and clear interrupt flag
@@ -1749,7 +1855,7 @@ void thread_mumessage_compose_message(void)
 
     // initialize keyboard to keyboard #1 (keyboard = 0)
     keyboard = 0;
-    phone.current_app = HOME_SCREEN;
+
     /* draw Compose Message screen visuals */
 
     LCD_DrawSection(section_compose_message_background,
@@ -1808,7 +1914,6 @@ void thread_mumessage_compose_message_check_TP(void)
          G8RTOS_kill_current_thread();     // thread improperly called
     }
 
-
     // index used to check for interaction between specific sections of screen
     int index = -1;
 
@@ -1821,7 +1926,10 @@ void thread_mumessage_compose_message_check_TP(void)
     // check if touch interacted with back button (IMPLEMENT)
     if (index == BACK_BUTTON_INDEX)
     {
-        //IMPLEMENT
+        /* kill Compose Message (IMPLEMENT) */
+
+        /* return to MuMessage main screen */
+        G8RTOS_add_thread(thread_mumessage_open_app, 180, "MM: open app");
     }
 
     if (index == SEND_BUTTON_INDEX)     // send button was pressed
@@ -2367,6 +2475,7 @@ void thread_mumessage_start_app(void)
             // message data should already be initialized to zero
     }
 
+    /* start main screen of MuMessage */
     G8RTOS_add_thread(thread_mumessage_open_app, 180, "MM: open app");
 
     phone.current_app = MUMESSAGE;      // set current app in phone (IMPLEMENT: DO THIS EVERYWHERE)
