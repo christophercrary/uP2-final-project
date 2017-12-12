@@ -34,6 +34,8 @@ semaphore_t semaphore_LCD;              // used for accessing LCD
 semaphore_t semaphore_ball_count;       // used for updating the amount of balls active
 semaphore_t semaphore_ball_head;        // used to identify the head of the ball static LL
 
+extern semaphore_t semaphore_CC3100;
+
 /* FIFOs */
 fifo_t fifo_coordinates;        // used for storing coordinates upon a touch being
                                 // made to the LCD touch panel
@@ -559,9 +561,12 @@ static inline void update_ball_velocity(ball_t *ball)
     static int16_t data_accel_x;        // x-axis accelerometer data (local to the thread)
     static int16_t data_accel_y;        // y-axis accelerometer data (local to the thread)
 
+    G8RTOS_semaphore_wait(&semaphore_CC3100);
     // exclusive access to sensor (no need for a semaphore)
     bmi160_read_accel_x(&data_accel_x);     // read x-axis accelerometer data
     bmi160_read_accel_y(&data_accel_y);     // read y-axis accelerometer data
+
+    G8RTOS_semaphore_signal(&semaphore_CC3100);
 
     // determine ball's x-axis velocity
     if (data_accel_x > 15000)

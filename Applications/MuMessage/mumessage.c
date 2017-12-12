@@ -1639,6 +1639,8 @@ void thread_mumessage_message_log(void)
     int16_t xPos = 0;
     int16_t yPos = 0;
 
+    unread_message_count=0; //no unread messages now
+
     /* read joystick every second to determine if screen should scroll to next page */
     while (1)
     {
@@ -1659,6 +1661,7 @@ void thread_mumessage_message_log(void)
 
         G8RTOS_thread_sleep(ONE_SECOND_MS);
     }
+
 
     // IMPLEMENT: GETTING KILLED BY HITTING BACK BUTTON
 
@@ -2393,9 +2396,9 @@ void thread_receive_message_data()
         message_log[temp_contacts.contact_of_sender].message_history[message_log[temp_contacts.contact_of_sender].current_number_of_messages].old_message[i] = temp_buffer[i];
     }
 
-    // mark message as received
-    message_log[temp_contacts.contact_of_sender].message_history[message_log[temp_contacts.contact_of_sender].current_number_of_messages].message_status = RECEIVED;
 
+    // mark message as received
+    message_log[temp_contacts.contact_of_sender].message_history[message_log[temp_contacts.contact_of_sender].current_number_of_messages++].message_status = RECEIVED;
 
     unread_message_count++;     // TESTING new message notification, need to reset if click on message log
 
