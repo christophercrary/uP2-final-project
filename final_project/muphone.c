@@ -76,44 +76,44 @@ static inline void muphone_init(void)
     G8RTOS_add_thread(thread_mumessage_background_processes, 150, "mumessage - b.p.");
     G8RTOS_add_thread(thread_mumessage_compose_message, 180, "compose message");
 
-    G8RTOS_semaphore_init(&semaphore_CC3100, 1);
-
-    phone.board_type = Host;
-   // phone.board_type = Client;
-    phone.current_app = HOME_SCREEN;
-
-
-    //initialize pong variables
-    /* add aperiodic threads */
-    P4->OUT = 0b00010000; //enable pull up resistor
-    P4->REN = 0b00010000;
-
-    /* initialize button press interrupt */
-    P4->DIR &= ~BIT4; //P4 is an input
-    P4->IFG &= ~BIT4;
-    P4->IES |= BIT4; //set bit 4 for high to low transition
-    P4->IE |= BIT4; //enable bit 4 interrupt
-    leds_init();
-
-    if(phone.board_type == Host)
-    {
-        G8RTOS_add_thread(thread_init_host_wifi, 30, "initHostWifi");
-        phone.self_contact = BRIT;
-
-    }
-    else
-    {
-        //client
-       G8RTOS_add_thread(thread_init_client_wifi, 30, "initClientWifi");
-      // phone.self_contact = CHRIS;
-       phone.self_contact = WES;
-    }
-
-
-   // G8RTOS_add_thread(thread_start_game, 40, "Start Game");
-
+//    G8RTOS_semaphore_init(&semaphore_CC3100, 1);
+//
+//    phone.board_type = Host;
+//   // phone.board_type = Client;
+//    phone.current_app = HOME_SCREEN;
+//
+//
+//    //initialize pong variables
+//    /* add aperiodic threads */
+//    P4->OUT = 0b00010000; //enable pull up resistor
+//    P4->REN = 0b00010000;
+//
+//    /* initialize button press interrupt */
+//    P4->DIR &= ~BIT4; //P4 is an input
+//    P4->IFG &= ~BIT4;
+//    P4->IES |= BIT4; //set bit 4 for high to low transition
+//    P4->IE |= BIT4; //enable bit 4 interrupt
+//    leds_init();
+//
+//    if(phone.board_type == Host)
+//    {
+//        G8RTOS_add_thread(thread_init_host_wifi, 30, "initHostWifi");
+//        phone.self_contact = BRIT;
+//
+//    }
+//    else
+//    {
+//        //client
+//       G8RTOS_add_thread(thread_init_client_wifi, 30, "initClientWifi");
+//      // phone.self_contact = CHRIS;
+//       phone.self_contact = WES;
+//    }
+//
+//
+//   // G8RTOS_add_thread(thread_start_game, 40, "Start Game");
+//    G8RTOS_add_thread(thread_receive_data, 40, "receiveData");
     G8RTOS_add_thread(thread_mumessage_start_app, 29, "start mumessage");
-    G8RTOS_add_thread(thread_receive_data, 40, "receiveData");
+
 
     // launch the operating system
     G8RTOS_launch();

@@ -27,6 +27,9 @@
 
 extern semaphore_t semaphore_CC3100;          // used to access CC3100 WiFi chip
 
+semaphore_t semaphore_cursor;
+
+semaphore_t semaphore_y_index;
 
 ////////////////////////////////END OF EXTERNS///////////////////////////////////////
 
@@ -35,6 +38,10 @@ extern semaphore_t semaphore_CC3100;          // used to access CC3100 WiFi chip
 //test (REMOVE)
 Point touch;
 
+//global variables for cursor
+uint16_t cursor_color;
+uint16_t max_current_row_index;
+uint8_t max_current_y_index;
 
 //////////////////////////END OF PUBLIC DATA MEMBERS/////////////////////////////////
 
@@ -795,36 +802,67 @@ static inline void insert_character(uint8_t character)
 {
     // IMPLEMENT: insert semaphore for cursor
 
+    G8RTOS_semaphore_wait(&semaphore_cursor);
     if (cursor.x < COMPOSE_MESSAGE_CURSOR_X_MAX)
     {
-        message_data.message[current_message_index++] = character;       // update current message
+        char temp = message_data.message[current_message_index];
+        message_data.message[current_message_index] = character;
+        char next_temp;
+        temp = message_data.message[current_message_index + 1];
+        //put character in array (may break up array
+       // for(uint16_t i = current_message_index+1; i <= message_data.header_info.size_of_data+1;i++)
+        //{
+           // next_temp = message_data.message[i+1];
+          //  message_data.message[i] = temp;
+
+        //}
+        current_message_index++;
+
+       // message_data.message[current_message_index++] = character;       // update current message
 
         message_data.header_info.size_of_data++;    // increment number of bytes to send
-
+        max_current_row_index+=LCD_TEXT_WIDTH + CURSOR_OFFSET;
         // the only way to successfully write back a character after deleting a character
         // fucking beats Brit and I (QUESTION)
         LCD_DrawRectangle(cursor.x, (cursor.x + LCD_TEXT_WIDTH), TEXT_ARENA_Y_MIN+2,
                          (TEXT_ARENA_Y_MIN+2 + LCD_TEXT_HEIGHT), LCD_WHITE);
 
-        LCD_PutChar(cursor.x, TEXT_ARENA_Y_MIN+2, character, LCD_TEXT_COLOR);
-        cursor.x += LCD_TEXT_WIDTH;
+        LCD_PutChar(cursor.x+CURSOR_OFFSET, TEXT_ARENA_Y_MIN+2, character, LCD_TEXT_COLOR);
+        cursor.x += LCD_TEXT_WIDTH + CURSOR_OFFSET;
     }
     else if (cursor.y < COMPOSE_MESSAGE_CURSOR_Y_MAX)       // if new-lines can be created
     {
         // create soft new-line (add vertical tab)
         message_data.message[current_message_index++] = VT;
 
+        // reset row counter
+        max_current_row_index=COMPOSE_MESSAGE_CURSOR_X_MIN;
         message_data.header_info.size_of_data++;    // increment number of bytes to send
 
         // place cursor at the beginning of next line
         cursor.x = COMPOSE_MESSAGE_CURSOR_X_MIN;
         cursor.y += LCD_TEXT_HEIGHT;
 
+        G8RTOS_semaphore_wait(&semaphore_y_index);
+        max_current_y_index += LCD_TEXT_HEIGHT;
+        G8RTOS_semaphore_signal(&semaphore_y_index);
+
         // wipe current line of text arena
         LCD_DrawSection(section_text_arena,
                         (sizeof(section_text_arena)/sizeof(section_text_arena[0])));
-    }
 
+        message_data.message[current_message_index++] = character;       // update current message
+
+        // the only way to successfully write back a character after deleting a character
+        // fucking beats Brit and I (QUESTION)
+        LCD_DrawRectangle(cursor.x, (cursor.x + LCD_TEXT_WIDTH), TEXT_ARENA_Y_MIN+2,
+                         (TEXT_ARENA_Y_MIN+2 + LCD_TEXT_HEIGHT), LCD_WHITE);
+
+        LCD_PutChar(cursor.x+CURSOR_OFFSET, TEXT_ARENA_Y_MIN+2, character, LCD_TEXT_COLOR);
+        cursor.x += LCD_TEXT_WIDTH + CURSOR_OFFSET;
+        max_current_row_index = LCD_TEXT_WIDTH + CURSOR_OFFSET;
+    }
+    G8RTOS_semaphore_signal(&semaphore_cursor);
     return;
 }
 
@@ -836,6 +874,8 @@ static inline void insert_character(uint8_t character)
 ************************************************************************************/
 static inline void insert_new_line(void)
 {
+    G8RTOS_semaphore_wait(&semaphore_cursor);
+
     // IMPLEMENT: insert semaphore for cursor
     if (cursor.y < COMPOSE_MESSAGE_CURSOR_Y_MAX)
     {
@@ -851,7 +891,14 @@ static inline void insert_new_line(void)
 
         cursor.x = COMPOSE_MESSAGE_CURSOR_X_MIN;
         cursor.y += LCD_TEXT_HEIGHT;
+        max_current_y_index+=LCD_TEXT_HEIGHT;
+
+        // reset row counter
+        max_current_row_index=COMPOSE_MESSAGE_CURSOR_X_MIN;
+
     }
+    G8RTOS_semaphore_signal(&semaphore_cursor);
+
     return;
 }
 
@@ -864,16 +911,18 @@ static inline void insert_new_line(void)
 static inline void delete_character()
 {
     // IMPLEMENT: insert semaphore for cursor (for blinking)
+    G8RTOS_semaphore_wait(&semaphore_cursor);
 
     // check if any previously typed characters exist
     if (cursor.x > COMPOSE_MESSAGE_CURSOR_X_MIN ||
         cursor.y > COMPOSE_MESSAGE_CURSOR_Y_MIN)
     {
         // erase previous character from text arena
-        LCD_DrawRectangle((cursor.x - LCD_TEXT_WIDTH), cursor.x, TEXT_ARENA_Y_MIN+2,
+        LCD_DrawRectangle((cursor.x - LCD_TEXT_WIDTH), cursor.x+CURSOR_WIDTH, TEXT_ARENA_Y_MIN+2,
                           (TEXT_ARENA_Y_MIN+2 + LCD_TEXT_HEIGHT), LCD_WHITE);
 
-        cursor.x -= LCD_TEXT_WIDTH;
+        cursor.x -= ( LCD_TEXT_WIDTH + CURSOR_OFFSET);
+        max_current_row_index-=(LCD_TEXT_WIDTH + CURSOR_OFFSET);
 
         /* check if previously entered character was new line (forced or vertical tab) */
         if ((message_data.message[current_message_index-1] == LF) ||     // guaranteed that LF follows CR
@@ -900,6 +949,12 @@ static inline void delete_character()
             // place cursor at the beginning of previous line
             cursor.x = COMPOSE_MESSAGE_CURSOR_X_MIN;
             cursor.y -= LCD_TEXT_HEIGHT;
+
+            G8RTOS_semaphore_wait(&semaphore_y_index);
+            max_current_y_index-=LCD_TEXT_HEIGHT;
+            G8RTOS_semaphore_signal(&semaphore_y_index);
+
+            max_current_row_index=COMPOSE_MESSAGE_CURSOR_X_MIN;
 
             /* two cases:
              * 1. the previous line either wrapped due to excessive characters (VT)
@@ -928,7 +983,9 @@ static inline void delete_character()
                                  (TEXT_ARENA_Y_MIN+2 + LCD_TEXT_HEIGHT), LCD_WHITE);
 
                 LCD_PutChar(cursor.x, TEXT_ARENA_Y_MIN+2, message_data.message[i], LCD_TEXT_COLOR);
-                cursor.x += LCD_TEXT_WIDTH;
+                cursor.x += LCD_TEXT_WIDTH+CURSOR_OFFSET;
+                max_current_row_index+=LCD_TEXT_WIDTH+CURSOR_OFFSET;
+
             }
         }
         else        // otherwise, erase single character from currently composed message
@@ -937,6 +994,7 @@ static inline void delete_character()
             message_data.header_info.size_of_data--;    // decrement number of bytes to send
         }
     }
+    G8RTOS_semaphore_signal(&semaphore_cursor);
     return;
 }
 
@@ -1002,6 +1060,14 @@ static inline void send_message(Board_Type_t board_type, Intended_Recipient_t co
 
     // mark message as sent
     message_log[contact].message_history[message_log[contact].current_number_of_messages].message_status[message_log[contact].current_number_of_messages++] = SENT;
+
+    G8RTOS_semaphore_wait(&semaphore_cursor);
+    LCD_DrawRectangle(COMPOSE_MESSAGE_CURSOR_X_MIN, cursor.x, COMPOSE_MESSAGE_CURSOR_Y_MIN, cursor.y, COMPOSE_MESSAGE_BACKGROUND_COLOR);
+    cursor.x = COMPOSE_MESSAGE_CURSOR_X_MIN;
+    cursor.y = COMPOSE_MESSAGE_CURSOR_Y_MIN;
+    G8RTOS_semaphore_signal(&semaphore_cursor);
+
+
 }
 
 
@@ -1850,6 +1916,12 @@ void thread_mumessage_start_app(void)
         message_data.to_and_from.contact_of_sender = WES;
     }
 
+    G8RTOS_semaphore_init(&semaphore_cursor,1);
+    G8RTOS_semaphore_init(&semaphore_y_index,1);
+    G8RTOS_add_thread(thread_blink_cursor, 10, "Blink Cursor");
+    G8RTOS_add_thread(thread_read_joystick_update_cursor, 10, "joystick read");
+
+
 
     // initialize each contact's current number of messages
     for (uint8_t i = 0; i < MAX_NUMBER_OF_CONTACTS; i++)
@@ -1858,6 +1930,9 @@ void thread_mumessage_start_app(void)
     }
     //message data should already be initialized to zero
 
+    cursor_color = CURSOR_COLOR;
+    max_current_row_index=COMPOSE_MESSAGE_CURSOR_X_MIN;
+    max_current_y_index = COMPOSE_MESSAGE_CURSOR_Y_MIN;
     G8RTOS_kill_current_thread();
 }
 
@@ -1944,47 +2019,235 @@ void thread_receive_message_data()
     //}
 
 
-
-
-
-
-
-
-
     G8RTOS_kill_current_thread(); //kill thread
 }
 
 
-void thread_send_pong_data()
+
+void thread_blink_cursor()
 {
 
-    int rand[10] = {0,1,2,3,4,5,6,7,8,9};//random variable
-    Intended_Data_t intended_data = PONG;
     while(1)
     {
-        G8RTOS_semaphore_wait(&semaphore_CC3100);
-        SendData((uint8_t*)&intended_data, HOST_IP_ADDR, sizeof(intended_data));
-        SendData((uint8_t*)&rand, HOST_IP_ADDR, sizeof(rand));
-        G8RTOS_semaphore_signal(&semaphore_CC3100);
 
-        G8RTOS_thread_sleep(300); //sleep for about a second
+        G8RTOS_semaphore_wait(&semaphore_cursor);
+
+        if(cursor_color == COMPOSE_MESSAGE_BACKGROUND_COLOR)
+        {
+            LCD_DrawRectangle(cursor.x, cursor.x+CURSOR_WIDTH, TEXT_ARENA_Y_MIN + 2, TEXT_ARENA_Y_MIN + 2 + CURSOR_HEIGHT, CURSOR_COLOR);
+            cursor_color = CURSOR_COLOR;
+        }
+        else
+        {
+            LCD_DrawRectangle(cursor.x, cursor.x+CURSOR_WIDTH, TEXT_ARENA_Y_MIN + 2, TEXT_ARENA_Y_MIN + 2 + CURSOR_HEIGHT, COMPOSE_MESSAGE_BACKGROUND_COLOR);
+             cursor_color = COMPOSE_MESSAGE_BACKGROUND_COLOR;
+        }
+
+
+        G8RTOS_semaphore_signal(&semaphore_cursor);
+
+        G8RTOS_thread_sleep(600);
+
+    }
+
+
+}
+
+void thread_read_joystick_update_cursor()
+{
+
+    int16_t xPos;
+    int16_t yPos;
+    while(1)
+    {
+        GetJoystickCoordinates(&xPos, &yPos);
+
+        G8RTOS_semaphore_wait(&semaphore_cursor);
+
+        if (cursor_color == COMPOSE_MESSAGE_BACKGROUND_COLOR)
+        {
+
+            if (xPos > 5000)
+            {
+                if (cursor.x != COMPOSE_MESSAGE_CURSOR_X_MIN)
+                {
+                    cursor.x -= (LCD_TEXT_WIDTH + CURSOR_OFFSET);
+                    current_message_index--;
+                }
+            }
+            else if (xPos < -5000)
+            {
+                if (cursor.x < max_current_row_index)
+                {
+                    cursor.x += LCD_TEXT_WIDTH + CURSOR_OFFSET;
+                    current_message_index++;
+                }
+            }
+
+
+            if(yPos > 5000)
+            {
+
+                //MOVE down
+                if (cursor.y < max_current_y_index)
+                {
+
+                    // wipe current line of text arena
+                    LCD_DrawSection(section_text_arena, (sizeof(section_text_arena)/sizeof(section_text_arena[0])));
+                    uint16_t original_x_cursor = cursor.x;
+
+
+                    uint16_t temp_start_index = current_message_index; // used to traverse message
+                    uint16_t temp_end_index = 0;
+                    // loop until one of the above mentioned cases are met
+                    while (message_data.message[temp_start_index] != LF && message_data.message[temp_start_index]!= VT)
+                    {
+                        temp_start_index++;
+                        current_message_index++; //MAKE A DEFINE FOR THIS VALUE
+
+                    }
+
+                    temp_start_index++; //dont include LF or VT
+
+                    //now have correct starting location
+                    //need to find ending location
+                    temp_end_index = temp_start_index;
+                    while(temp_end_index != MESSAGE_MAX_NUM_OF_CHARACTERS && message_data.message[temp_end_index] != 0x00)
+                    {
+                        temp_end_index++;
+                        current_message_index++; //MAKE A DEFINE FOR THIS VALUE
+
+                        if(message_data.message[temp_end_index] == CR)
+                        {
+                            current_message_index+=2;
+                            break;
+                        }
+                        if(message_data.message[temp_end_index] == VT)
+                        {
+                            current_message_index++;
+                            break;
+                        }
+
+                    }
+
+                    current_message_index = temp_end_index;
+
+                    // handle edge case in which while loop above was broken by temp_index equaling 0
+
+                    cursor.x = COMPOSE_MESSAGE_CURSOR_X_MIN;
+                    max_current_row_index = COMPOSE_MESSAGE_CURSOR_X_MIN;
+                    // print next line of text
+                    for (uint16_t i = temp_start_index; i < temp_end_index; i++)
+                    {
+                        // prevent LCD glitch
+                        LCD_DrawRectangle(cursor.x, (cursor.x + LCD_TEXT_WIDTH),TEXT_ARENA_Y_MIN + 2, (TEXT_ARENA_Y_MIN + 2 + LCD_TEXT_HEIGHT),LCD_WHITE);
+
+                        LCD_PutChar(cursor.x + CURSOR_OFFSET,TEXT_ARENA_Y_MIN + 2, message_data.message[i], LCD_TEXT_COLOR);
+                        cursor.x += LCD_TEXT_WIDTH + CURSOR_OFFSET;
+                        max_current_row_index += LCD_TEXT_WIDTH + CURSOR_OFFSET;
+
+                    }
+                    cursor.y += (LCD_TEXT_HEIGHT);
+
+                    if(max_current_row_index < original_x_cursor)
+                    {
+                          cursor.x = max_current_row_index;
+                    }
+                    else
+                    {
+                          cursor.x = original_x_cursor;
+                    }
+
+                 //   max_current_row_index = cursor.x;
+
+                    //max_current_y_index -= LCD_TEXT_HEIGHT; //MIGHT NOT BE THE CORRECT MOVE
+
+                    G8RTOS_thread_sleep(300);
+
+                }
+
+                }
+
+
+            }
+            else if(yPos < -5000)
+            {
+
+                //move up
+                if(cursor.y != COMPOSE_MESSAGE_CURSOR_Y_MIN)
+                {
+                    // wipe current line of text arena
+                    LCD_DrawSection(section_text_arena,(sizeof(section_text_arena)/sizeof(section_text_arena[0])));
+
+                    uint16_t original_x_cursor = cursor.x;
+                    uint16_t temp_start_index = current_message_index; // used to traverse message
+                    uint16_t temp_end_index=0;
+                    uint32_t count=0;
+                    bool found_end = false;
+                         // loop until one of the above mentioned cases are met
+                         while ((temp_start_index > 0) && (count < 2))
+                         {
+                             temp_start_index--;
+                             if(message_data.message[temp_start_index] == LF || message_data.message[temp_start_index] == VT)
+                             {
+                                 count++;
+                             }
+                             if(!found_end && (message_data.message[temp_start_index] == LF || message_data.message[temp_start_index] == VT))
+                             {
+                                 found_end=true;
+                                 temp_end_index = temp_start_index+1;
+                                // temp_start_index++;
+
+                             }
+                         }
+                         // handle edge case in which while loop above was broken by temp_index equaling 0
+                             if((message_data.message[temp_start_index] == LF || message_data.message[temp_start_index] == VT))
+                             {
+                                 temp_start_index++;
+                             }
+//                         temp_start_index++;
+
+                         cursor.x = COMPOSE_MESSAGE_CURSOR_X_MIN;
+                         max_current_row_index = COMPOSE_MESSAGE_CURSOR_X_MIN;
+                         // print next line of text
+                         for (uint16_t i = temp_start_index; i < temp_end_index; i++)
+                         {
+                             // prevent LCD glitch
+                             LCD_DrawRectangle(cursor.x, (cursor.x + LCD_TEXT_WIDTH), TEXT_ARENA_Y_MIN + 2, (TEXT_ARENA_Y_MIN + 2 + LCD_TEXT_HEIGHT), LCD_WHITE);
+
+                             if(message_data.message[i] != CR && message_data.message[i]!= LF && message_data.message[i] != VT && message_data.message[i] != 0)
+                             {
+                                  LCD_PutChar(cursor.x + CURSOR_OFFSET, TEXT_ARENA_Y_MIN + 2, message_data.message[i], LCD_TEXT_COLOR);
+                                  cursor.x += LCD_TEXT_WIDTH + CURSOR_OFFSET;
+                                  max_current_row_index += LCD_TEXT_WIDTH + CURSOR_OFFSET;
+                             }
+
+                             current_message_index--;
+
+                         }
+                        // current_message_index--; //may or may not need to do this
+                         cursor.y -=(LCD_TEXT_HEIGHT);
+                         max_current_row_index = cursor.x;
+                         cursor.x = original_x_cursor;
+                       //  max_current_y_index+=(LCD_TEXT_HEIGHT);
+
+                         G8RTOS_thread_sleep(300);
+
+                }
+
+
+            }
+
+
+
+        G8RTOS_semaphore_signal(&semaphore_cursor);
+
+
+        G8RTOS_thread_sleep(200);
 
     }
 
 }
-
-void thread_receive_pong_data()
-{
-    int rand[10];
-    G8RTOS_semaphore_wait(&semaphore_CC3100);
-
-    ReceiveData((uint8_t*)&rand, sizeof(rand));
-    G8RTOS_semaphore_signal(&semaphore_CC3100);
-
-    G8RTOS_kill_current_thread(); //kill thread
-
-}
-
 
 
 /**************************** END OF COMMON THREADS ********************************/
