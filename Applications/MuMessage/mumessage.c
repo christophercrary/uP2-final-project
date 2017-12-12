@@ -10,7 +10,6 @@
 #include "G8RTOS.h"
 #include "LCD.h"     // QUESTION: what is the best way to include LCD.h?
 #include "GPIO.h"    // QUESTION: what is the best way to include GPIO.h?
-#include "time.h"   // REMOVE
 
 /////////////////////////////END OF DEPENDENCIES/////////////////////////////////////
 
@@ -31,14 +30,38 @@ extern semaphore_t semaphore_CC3100;          // used to access CC3100 WiFi chip
 ////////////////////////////////END OF EXTERNS///////////////////////////////////////
 
 //////////////////////////////PUBLIC DATA MEMBERS////////////////////////////////////
-
-//test (REMOVE)
-Point touch;
-
-
 //////////////////////////END OF PUBLIC DATA MEMBERS/////////////////////////////////
 
 //////////////////////////////PRIVATE DATA MEMBERS///////////////////////////////////
+
+/* main screen */
+
+const Rectangle section_mumessage_main_screen[] =
+{
+     {MUMESSAGE_MAIN_SCREEN_X_MIN, MUMESSAGE_MAIN_SCREEN_X_MAX, MUMESSAGE_MAIN_SCREEN_Y_MIN, MUMESSAGE_MAIN_SCREEN_Y_MAX,
+      MUMESSAGE_MAIN_SCREEN_COLOR}
+};
+const Rectangle section_mumessage_main_screen_buttons[] =
+{
+     {MUMESSAGE_MAIN_SCREEN_COMPOSE_MESSAGE_BUTTON_X_MIN, MUMESSAGE_MAIN_SCREEN_COMPOSE_MESSAGE_BUTTON_X_MAX,
+      MUMESSAGE_MAIN_SCREEN_COMPOSE_MESSAGE_BUTTON_Y_MIN, MUMESSAGE_MAIN_SCREEN_COMPOSE_MESSAGE_BUTTON_Y_MAX,
+      MUMESSAGE_MAIN_SCREEN_COMPOSE_MESSAGE_BUTTON_COLOR},
+     {MUMESSAGE_MAIN_SCREEN_MESSAGE_LOG_BUTTON_X_MIN, MUMESSAGE_MAIN_SCREEN_MESSAGE_LOG_BUTTON_X_MAX,
+      MUMESSAGE_MAIN_SCREEN_MESSAGE_LOG_BUTTON_Y_MIN, MUMESSAGE_MAIN_SCREEN_MESSAGE_LOG_BUTTON_Y_MAX,
+      MUMESSAGE_MAIN_SCREEN_MESSAGE_LOG_BUTTON_COLOR}
+};
+
+const Text text_section_mumessage_main_screen[] =
+{
+ {MUMESSAGE_MAIN_SCREEN_INTRO_TEXT_X_START, MUMESSAGE_MAIN_SCREEN_INTRO_TEXT_Y_START,
+  " MuMessage: an embedded messaging app~n"
+  "Created by Brit Chesley and Chris Crary",
+  MUMESSAGE_MAIN_SCREEN_INTRO_TEXT_COLOR},
+ {MUMESSAGE_MAIN_SCREEN_COMPOSE_MESSAGE_BUTTON_TEXT_X_START, MUMESSAGE_MAIN_SCREEN_COMPOSE_MESSAGE_BUTTON_TEXT_Y_START,
+  "Compose Message", MUMESSAGE_MAIN_SCREEN_BUTTON_TEXT_COLOR},
+  {MUMESSAGE_MAIN_SCREEN_MESSAGE_LOG_BUTTON_TEXT_X_START, MUMESSAGE_MAIN_SCREEN_MESSAGE_LOG_BUTTON_TEXT_Y_START,
+    "Message Log", MUMESSAGE_MAIN_SCREEN_BUTTON_TEXT_COLOR}
+};
 
 /************************** COMPOSE MESSAGE MEMBERS ********************************/
 
@@ -772,6 +795,93 @@ static Message_Data_t message_data;
 
 /************************* END OF COMPOSE MESSAGE MEMBERS **************************/
 
+/***************************** MESSAGE LOG MEMBERS *********************************/
+// message log background section
+const static Rectangle section_message_log_background[] =
+{
+    {MESSAGE_LOG_BACKGROUND_X_MIN, MESSAGE_LOG_BACKGROUND_X_MAX,
+     MESSAGE_LOG_BACKGROUND_Y_MIN, MESSAGE_LOG_BACKGROUND_Y_MAX,
+     MESSAGE_LOG_BACKGROUND_COLOR}
+};
+
+// message log header bar
+const static Rectangle section_message_log_header[] =
+{
+    {MESSAGE_LOG_HEADER_X_MIN, MESSAGE_LOG_HEADER_X_MAX,
+     MESSAGE_LOG_HEADER_Y_MIN, MESSAGE_LOG_HEADER_Y_MAX,
+     MESSAGE_LOG_HEADER_COLOR},
+    {MESSAGE_LOG_HEADER_DIVIDER_X_MIN, MESSAGE_LOG_HEADER_DIVIDER_X_MAX,
+     MESSAGE_LOG_HEADER_DIVIDER_Y_MIN, MESSAGE_LOG_HEADER_DIVIDER_Y_MAX,
+     MESSAGE_LOG_HEADER_DIVIDER_COLOR}
+};
+
+// message log header bar buttons (back)
+const static Rectangle section_message_log_header_buttons[] =
+{
+     {MESSAGE_LOG_BACK_BUTTON_X_MIN, MESSAGE_LOG_BACK_BUTTON_X_MAX,
+      MESSAGE_LOG_BACK_BUTTON_Y_MIN, MESSAGE_LOG_BACK_BUTTON_Y_MAX,
+      MESSAGE_LOG_BACK_BUTTON_COLOR}
+};
+
+// message log header buttons text
+const static Text text_section_message_log_header[] =
+{
+     {MESSAGE_LOG_BACK_BUTTON_TEXT_X_START, MESSAGE_LOG_BACK_BUTTON_TEXT_Y_START,
+      "< BACK", MESSAGE_LOG_BACK_BUTTON_TEXT_COLOR}
+};
+
+// message log text arena section
+const static Rectangle section_message_log_text_arena[] =
+{
+     {MESSAGE_LOG_TEXT_ARENA_X_MIN, MESSAGE_LOG_TEXT_ARENA_X_MAX,
+      MESSAGE_LOG_TEXT_ARENA_Y_MIN, MESSAGE_LOG_TEXT_ARENA_Y_MAX,
+      MESSAGE_LOG_TEXT_ARENA_COLOR}
+};
+
+
+/* test messages / miscellaneous (hard-coded nonsense) */
+
+char message1[256] =
+{
+ 'h', 'e', 'y', ',', ' ', 'w', 'h', 'a', 't', '\'', 's', ' ', 'u', 'p', ' ', 'm', 'a', 'n', '?',
+ ' ', 'N', 'o', 't', ' ', 'm', 'u', 'c', 'h', '.', '.', '.', VT,
+ 'J', 'u', 's', 't', ' ', 'w', 'a', 'n', 't', 'e', 'd', ' ', 't', 'o', ' ', 'c', 'h', 'e', 'c', 'k', CR, LF,
+ 'u', 'p', ' ', 'o', 'n', ' ', 'y', 'o', 'u', ETX
+};
+
+char message2[256] =
+{
+ 'y', 'o', 'o', 'o', VT, CR, LF,
+ 'n', 'o', 't', 'h', 'i', 'n', 'g', ' ', 'm', 'u', 'c', 'h', ' ', 'm', 'a', 'n', ETX
+};
+
+char message3[256] =
+{
+ 's', 'w', 'e', 'e', 't', CR, LF, CR, LF, ETX
+};
+
+char message4[256] =
+{
+ 'y', 'o', 'o', 'o', VT, CR, LF,
+ 'n', 'o', 't', 'h', 'i', 'n', 'g', ' ', 'm', 'u', 'c', 'h', ' ', 'm', 'a', 'n', ETX
+};
+
+char message5[256] =
+{
+ 'm', 'y', ' ', 'd', 'a', 'w', 'g', ' ', 'I', ' ', 'f', 'u', 'c', 'k', 'i', 'n', 'g', ' ', 'l', 'o', 'v', 'e', ' ',
+ 'y', 'o', 'u', VT, CR, LF, VT, ETX
+};
+
+char *message_array[5] = {message1, message2, message3, message4, message5};
+
+uint8_t messageStatus[5] = {0, 1, 0, 1, 1};
+
+/************************ END OF MESSAGE LOG MEMBERS *********************************/
+
+
+// boolean to determine if application has previously been initialized
+static bool applicationInitialized = false;
+
 // private count of number of unread (new) messages
 static uint16_t unread_message_count;
 
@@ -941,21 +1051,6 @@ static inline void delete_character()
 }
 
 /************************************************************************************
-* Name: delete_character_wait
-* Purpose: Helper function to continuously delete characters at specified rates,
-*          if the user continues to hold the delete key.
-* Input(s):
-* Output: N/A
-************************************************************************************/
-static inline void delete_character_wait()
-{
-    // IMPLEMENT: insert semaphore for cursor (for blinking)
-
-    return;
-}
-
-
-/************************************************************************************
 * Name: send_message
 * Purpose: Helper function to send message via wifi after touch is recognized on send message rectangle
 * Input(s): Board_Type_t that defines who the message is meant to be sent to
@@ -1084,14 +1179,6 @@ void aperiodic_mumessage_compose_message(void)
                         // lowest bit with a pending interrupt.
                         // this access will only clear flag n.
 
-    // if triggering switch is high after debounce time
-    if ( ( P4->IN & ( 1 << (status/2) - 1 ) ) == ( 1 << (status/2) - 1 ) )
-    {
-        return;     // ISR improperly called
-    }
-
-    // otherwise, interrupt was properly called
-
     // if LCD TP triggered interrupt (port 4, pin 0)
     if (status == 2)        //  2 = 2*(0+2)
     {
@@ -1103,12 +1190,123 @@ void aperiodic_mumessage_compose_message(void)
     }
 }
 
+/************************************************************************************
+ * Name: aperiodic_mumessage_main_screen
+ * Purpose: Aperiodic event created after the initial display of the main screen
+ *          screen upon MuMessage opening. If a valid touch was made to the LCD TouchPanel,
+ *          a thread for checking what section of the screen was pressed will be
+ *          created.
+ * Input(s): N/A
+ * Output: N/A
+ ***********************************************************************************/
+void aperiodic_mumessage_main_screen(void)
+{
+    uint8_t status;     // used to identify which P4 pin triggered the ISR (pins 4 or 5)
+
+    status = P4IV;      // P4IV = (2*(n+1)) where n is the pin number of the
+                        // lowest bit with a pending interrupt.
+                        // this access will only clear flag n.
+
+    // if LCD TP triggered interrupt (port 4, pin 0)
+    if (status == 2)        //  2 = 2*(0+2)
+    {
+        // disable pin 0 interrupt (will be rearmed after 0.5 seconds) (IMPLEMENT!)
+        GPIO_disableInterrupt(GPIO_PORT_P4, GPIO_PIN0);
+
+        // create thread to check LCD screen press within Compose Message
+        G8RTOS_add_thread(thread_mumessage_main_screen_check_TP, 50, "TP - MM main screen");
+    }
+}
+
+/************************************************************************************
+ * Name: aperiodic_mumessage_message_log
+ * Purpose: Aperiodic event created after the initial display of the Message Log
+ *          screen within MuMessage. If a valid touch was made to the LCD TouchPanel,
+ *          a thread for checking what section of the screen was pressed will be
+ *          created.
+ * Input(s): N/A
+ * Output: N/A
+ ***********************************************************************************/
+void aperiodic_mumessage_message_log(void)
+{
+    uint8_t status;     // used to identify which P4 pin triggered the ISR (pins 4 or 5)
+
+    status = P4IV;      // P4IV = (2*(n+1)) where n is the pin number of the
+                        // lowest bit with a pending interrupt.
+                        // this access will only clear flag n.
+
+    // if LCD TP triggered interrupt (port 4, pin 0)
+    if (status == 2)        //  2 = 2*(0+2)
+    {
+        // disable pin 0 interrupt (will be rearmed after 0.5 seconds) (IMPLEMENT!)
+        GPIO_disableInterrupt(GPIO_PORT_P4, GPIO_PIN0);
+
+        // create thread to check LCD screen press within Compose Message
+        G8RTOS_add_thread(thread_mumessage_message_log_check_TP, 50, "TP - message log");
+    }
+}
+
 /**************************** END OF APERIODIC THREADS *****************************/
 
 
 /******************************* COMMON THREADS ************************************/
 
 /* general threads */
+
+/************************************************************************************
+* Name: thread_mumessage_main_screen_check_TP
+* Purpose: Thread to check if touch made to LCD TouchPanel interacted with any
+*          predefined sections on the main screen of the MuMessage app.
+* Input(s): N/A
+* Output: N/A
+************************************************************************************/
+void thread_mumessage_main_screen_check_TP(void)
+{
+    // first debounce LCD
+    G8RTOS_thread_sleep(TWO_TENTHS_SECOND_MS);
+
+    // check if triggering switch is high after debounce time
+    if ( P4->IN & PIN_TOUCHPANEL )
+    {
+         G8RTOS_kill_current_thread();     // thread improperly called
+    }
+
+    // otherwise, touch was properly made to TouchPanel LCD
+    Point touch = TP_ReadXY();
+
+    // index used to check for interaction between specific sections of screen
+    int index = -1;
+
+    // check for touch made to home screen application icons
+    index = TP_CheckForSectionPress(touch, section_mumessage_main_screen_buttons,
+                                    (sizeof(section_mumessage_main_screen_buttons)/sizeof(section_mumessage_main_screen_buttons[0])));
+
+    // if touch made to LCD screen interacted with main screen choice
+    if (index != -1)
+    {
+        G8RTOS_disable_aperiodic_thread(PORT4_IRQn);        // disable main screen aperiodic event
+
+        if (index == COMPOSE_MESSAGE_BUTTON_INDEX)
+        {
+            G8RTOS_add_thread(thread_mumessage_compose_message, 100, "MM: compose message");
+        }
+        else if (index == MESSAGE_LOG_BUTTON_INDEX)
+        {
+            G8RTOS_add_thread(thread_mumessage_message_log, 100, "MM: message log");
+        }
+    }
+    else        // otherwise, allow future touches to be made to LCD TP
+    {
+        // re-enable LCD Touch Panel interrupt and clear interrupt flag
+        GPIO_enableInterrupt(GPIO_PORT_P4, GPIO_PIN0);
+        GPIO_clearInterruptFlag(GPIO_PORT_P4, GPIO_PIN0);
+    }
+
+    // done handling TP touches, kill self
+    G8RTOS_kill_current_thread();
+
+}
+
 
 /************************************************************************************
 * Name: thread_mumessage_background_processes
@@ -1132,11 +1330,6 @@ void thread_mumessage_background_processes(void)
     // initialize unread_message_count_str with initial value
     sprintf(unread_message_notification, "%u New Messages", previous_unread_message_count);
 
-//    time_t t = time(NULL);
-//    struct tm tm = *localtime(&t);
-//    char teststring[19];
-//
-//    sprintf(teststring, "%d-%d-%d %d:%d:%d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 
     // local Rectangle structure, used to update notifications in header bar (used to wipe previous notification)
     Rectangle section_unread_message_notification =
@@ -1153,33 +1346,12 @@ void thread_mumessage_background_processes(void)
      .string = unread_message_notification, .color = MUPHONE_HEADER_BAR_NOTIFICATION_TEXT_COLOR
     };
 
-//    // local Rectangle structure, used to update clock in header bar (used to wipe previous clock time)
-//    // IMPLEMENT: MOVE TO MUPHONE.C
-//    Rectangle section_clock =
-//    {
-//     .xMin = MUPHONE_HEADER_BAR_CLOCK_PANEL_X_MIN, .xMax = MUPHONE_HEADER_BAR_CLOCK_PANEL_X_MAX,
-//     .yMin = MUPHONE_HEADER_BAR_CLOCK_PANEL_Y_MIN, .yMax = MUPHONE_HEADER_BAR_CLOCK_PANEL_Y_MAX,
-//     .color = MUPHONE_HEADER_BAR_COLOR
-//    };
-//
-//    // local Text structure, used to print clock in header bar
-//    // IMPLMENT: MOVE TO MUPHONE.C
-//    Text text_section_clock =
-//    {
-//     .xStart = MUPHONE_HEADER_BAR_CLOCK_TEXT_X_START, .yStart = MUPHONE_HEADER_BAR_CLOCK_TEXT_Y_START,
-//     .string = teststring, .color = MUPHONE_HEADER_BAR_NOTIFICATION_TEXT_COLOR
-//    };
 
     // write initial notification status
     LCD_DrawRectangleStructure(section_unread_message_notification);
 
     // print updated unread message notification
     LCD_PrintTextStructure(text_section_unread_message_notification);
-
-//    // write initial clock
-//    LCD_DrawRectangleStructure(section_clock);
-//    LCD_PrintTextStructure(text_section_clock);
-
 
     while(1)
     {
@@ -1233,6 +1405,334 @@ void thread_mumessage_background_processes(void)
 /* threads for Compose Message */
 
 /************************************************************************************
+* Name: print_messages
+* Purpose: Helper function to print as many messages starting at and before
+*          the passed-in index of the global message history array
+* Input(s): IMPLEMENT: GLOBAL MESSAGE HISTORY PARAMETER, int *message_history_index
+* Output: N/A
+************************************************************************************/
+static void print_messages(int *message_history_index, uint8_t *number_of_messages_printed)
+{
+    // reset counter for number of messages printed
+    (*number_of_messages_printed) = 0;
+
+    /* redraw text arena */
+    LCD_DrawSection(section_message_log_text_arena,
+                    (sizeof(section_message_log_text_arena)/sizeof(section_message_log_text_arena[0])));
+
+    // variable to determine where to start printing message (from the bottom of the message)
+    // initialize to bottom of screen
+    uint8_t yPos = MESSAGE_LOG_TEXT_ARENA_Y_MAX - MESSAGE_LOG_MESSAGE_BOX_EDGE_OFFSET;
+
+    /* print as many messages can fit on screen */
+    while (*message_history_index >= 0)
+    {
+        char temp_char = NULL;
+        uint16_t index = 0;
+        uint8_t num_of_rows = 1;        // number of lines of text
+        int max_row_length = -1;        // guarantee update at least once
+        uint8_t current_row_length = 0;
+
+        // traverse message to find longest line of characters (used to determine size of message)
+        do
+        {
+            // read character from message
+            temp_char = message_array[*message_history_index][index++];
+
+            if (temp_char != ETX)        // ignore end of text characters from message
+            {
+                if (temp_char == VT)      // soft new line encountered
+                {
+                    num_of_rows++;
+
+                    // check if current line has greatest length so far
+                    if (current_row_length > max_row_length)
+                    {
+                        max_row_length = current_row_length;
+                    }
+
+                    current_row_length = 0;     // reset current row length
+                }
+                else if (temp_char == CR)      // forced new line encountered
+                {
+                    index++;        // increment past LF
+                    num_of_rows++;
+
+                    // check if current line has greatest length so far
+                    if (current_row_length > max_row_length)
+                    {
+                        max_row_length = current_row_length;
+                    }
+
+                    current_row_length = 0;     // reset current row length
+                }
+                else
+                {
+                    current_row_length++;       // increase number of characters encountered
+                }
+            }
+        }while(temp_char != ETX);       // end of text encountered
+
+        // if message was only one line or if last line was greatest length
+        if ((max_row_length == -1) || (current_row_length > max_row_length))
+        {
+            max_row_length = current_row_length;
+        }
+
+        /* check if message can fit on screen */
+        if ( (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 2) - (num_of_rows * LCD_TEXT_HEIGHT) -
+            MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET - MESSAGE_LOG_MESSAGE_BOX_EDGE_OFFSET) < MESSAGE_LOG_TEXT_ARENA_Y_MIN )
+        {
+            break;      // message cannot fit, break for loop
+        }
+
+        /* draw either sent or sent message, based on who message belongs to (IMPLEMENT) */
+
+        if (messageStatus[*message_history_index])       // if message was received
+        {
+            /* draw received message */
+
+            // draw black border around message
+            LCD_DrawRectangle(MESSAGE_LOG_MESSAGE_BOX_RECEIVED_X_MIN,
+                              ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 2) + MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET),
+                              (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 2) - (num_of_rows * LCD_TEXT_HEIGHT) - MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET),
+                              (yPos + MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET),
+                              MESSAGE_LOG_MESSAGE_BOX_BORDER_COLOR);
+
+            // draw received rectangle based on size of longest length line in text message
+            LCD_DrawRectangle(MESSAGE_LOG_MESSAGE_BOX_RECEIVED_X_MIN,
+                              ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 2)),
+                              (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 2) - (num_of_rows * LCD_TEXT_HEIGHT)), yPos,
+                              MESSAGE_LOG_MESSAGE_BOX_RECEIVED_COLOR);
+
+
+            index = 0;      // reset temporary index
+
+            // IMPLEMENT depending on whether or not received or received
+
+            // initialize a cursor at beginning of received message box
+            uint8_t x = MESSAGE_LOG_MESSAGE_RECEIVED_TEXT_X_MIN;      // used to print within message box
+            uint8_t y = (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 1) - (num_of_rows * LCD_TEXT_HEIGHT));
+
+            /* print message within received box */
+            do
+            {
+                // read character from message
+                temp_char = message_array[*message_history_index][index++];
+
+                if (temp_char != ETX)        // ignore end of text characters from message
+                {
+                    if (temp_char == VT)    // soft new line encountered
+                    {
+                        x = MESSAGE_LOG_MESSAGE_RECEIVED_TEXT_X_MIN;        // set cursor to beginning of next line
+                        y += LCD_TEXT_HEIGHT;
+                    }
+                    else if (temp_char == CR)     // forced new line encountered
+                    {
+                        index++;        // increment past LF
+
+                        x = MESSAGE_LOG_MESSAGE_RECEIVED_TEXT_X_MIN;        // set cursor to beginning of next line
+                        y += LCD_TEXT_HEIGHT;
+                    }
+                    else
+                    {
+                        LCD_PutChar(x, y, temp_char, MESSAGE_LOG_MESSAGE_TEXT_COLOR);       // place next character
+                        x += LCD_TEXT_WIDTH;        // increment cursor position
+                    }
+                }
+
+            }while(temp_char != ETX);       // end of text encountered
+
+        }
+        else        // if message was sent
+        {
+
+            /* draw sent message box */
+
+            // draw black border around message box
+            LCD_DrawRectangle((MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX - ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 2) + MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET)),
+                              MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX,
+                              (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 2) - (num_of_rows * LCD_TEXT_HEIGHT) - MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET),
+                              (yPos + MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET),
+                              MESSAGE_LOG_MESSAGE_BOX_BORDER_COLOR);
+
+            // draw sent rectangle based on size of longest length line in text message
+            LCD_DrawRectangle((MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX - ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 2))),
+                              MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX,
+                              (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 2) - (num_of_rows * LCD_TEXT_HEIGHT)),
+                              yPos,
+                              MESSAGE_LOG_MESSAGE_BOX_SENT_COLOR);
+
+            index = 0;      // reset temporary index
+
+            // IMPLEMENT depending on whether or not sent or sent
+
+            // initialize a cursor at beginning of sent message box
+            uint16_t x = (MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX - ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 1)));      // used to print within message box
+            uint8_t y = (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 1) - (num_of_rows * LCD_TEXT_HEIGHT));
+
+            /* print message within sent box */
+            do
+            {
+                // read character from message
+                temp_char = message_array[*message_history_index][index++];
+
+                if (temp_char != ETX)        // ignore end of text characters from message
+                {
+                    if (temp_char == VT)    // soft new line encountered
+                    {
+                        x = (MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX - ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 1)));        // set cursor to beginning of next line
+                        y += LCD_TEXT_HEIGHT;
+                    }
+                    else if (temp_char == CR)      // new line encountered
+                    {
+                        index++;        // increment past LF
+
+                        x = (MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX - ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 1)));        // set cursor to beginning of next line
+                        y += LCD_TEXT_HEIGHT;
+                    }
+                    else
+                    {
+                        LCD_PutChar(x, y, temp_char, MESSAGE_LOG_MESSAGE_TEXT_COLOR);       // place next character
+                        x += LCD_TEXT_WIDTH;        // increment cursor position
+                    }
+                }
+            }while(temp_char != ETX);       // end of text encountered
+        }
+
+        // update yPos to be at top of last printed message (bottom of next printable area)
+        yPos = ((yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 2) - (num_of_rows * LCD_TEXT_HEIGHT) - MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET) - MESSAGE_LOG_MESSAGE_BOX_Y_OFFSET);
+
+        // retrieve previous message on the next iteration
+        (*message_history_index) = (*message_history_index) - 1;
+
+        // increment the counter of the amount of messages printed
+        (*number_of_messages_printed) = (*number_of_messages_printed) + 1;
+    }
+
+    return;
+}
+
+/************************************************************************************
+* Name: thread_mumessage_message_log
+* Purpose: Thread to draw message log screen
+* Input(s): N/A
+* Output: N/A
+************************************************************************************/
+void thread_mumessage_message_log(void)
+{
+    // draw necessary screen visuals
+    LCD_DrawSection(section_message_log_background,
+                    (sizeof(section_message_log_background)/sizeof(section_message_log_background[0])));
+
+    LCD_DrawSection(section_message_log_header,
+                    (sizeof(section_message_log_header)/sizeof(section_message_log_header[0])));
+
+    LCD_DrawSection(section_message_log_header_buttons,
+                    (sizeof(section_message_log_header_buttons)/sizeof(section_message_log_header_buttons[0])));
+
+    LCD_PrintTextSection(text_section_message_log_header,
+                         (sizeof(text_section_message_log_header)/sizeof(text_section_message_log_header[0])));
+
+    // re-enable P4 interrupt
+    GPIO_enableInterrupt(GPIO_PORT_P4, GPIO_PIN0);
+
+    /* add the necessary aperiodic thread for touches made to the LCD TouchPanel */
+    G8RTOS_add_aperiodic_thread(aperiodic_mumessage_message_log, PORT4_IRQn, 6);
+
+    int number_of_messages = 4;     // IMPLEMENT: NUMBER OF MESSAGES IN CONTACT'S MESSAGE LOG
+    int message_history_index = number_of_messages;     // used to determine max index of message history
+    uint8_t prev_numbers_of_messages_printed[MAX_NUMBER_OF_MESSAGES];     // used to traverse down in message log (make better way eventually)
+    uint8_t print_index = 0;
+    uint8_t current_number_of_messages_printed;     // used whenever printing new screen of messages
+
+    // initialize print array (garbage)
+    for (uint8_t i = 0; i < MAX_NUMBER_OF_MESSAGES; i++)
+    {
+        prev_numbers_of_messages_printed[i] = 0;
+    }
+
+    /* print initial screen of message log (most current messages) */
+    print_messages(&message_history_index, &current_number_of_messages_printed);
+
+    int temp_index = message_history_index;     // used to prevent unnecessary printing of messages
+
+    // variables for reading joystick data
+    int16_t xPos = 0;
+    int16_t yPos = 0;
+
+    /* read joystick every second to determine if screen should scroll to next page */
+    while (1)
+    {
+        /* read joystick */
+        GetJoystickCoordinates(&xPos, &yPos);
+
+        if ((yPos > 100) && (temp_index < message_history_index))     // traverse down in message log
+        {
+            temp_index += prev_numbers_of_messages_printed[--print_index];        // this is used to avoid making another print_messages function
+            print_messages(&temp_index, &current_number_of_messages_printed);
+        }
+        else if ((yPos < -100) && (temp_index >= 0))        // traverse up in message log
+        {
+            prev_numbers_of_messages_printed[print_index++] = current_number_of_messages_printed + print_index + 2;
+            print_messages(&temp_index, &current_number_of_messages_printed);
+        }
+
+
+        G8RTOS_thread_sleep(ONE_SECOND_MS);
+    }
+
+    // IMPLEMENT: GETTING KILLED BY HITTING BACK BUTTON
+
+}
+
+/************************************************************************************
+* Name: thread_mumessage_message_log_check_TP
+* Purpose: Thread to check if touch made to LCD TouchPanel interacted with any
+*          predefined sections in the Compose Message screen of MuMessage.
+* Input(s): N/A
+* Output: N/A
+************************************************************************************/
+void thread_mumessage_message_log_check_TP(void)
+{
+    // otherwise, touch was properly made to TouchPanel LCD
+    Point touch = TP_ReadXY();
+
+    // first debounce LCD
+    G8RTOS_thread_sleep(LCD_DEBOUNCE_TIME);
+
+    // check if triggering switch is high after debounce time
+    if ( P4->IN & PIN_TOUCHPANEL )
+    {
+         G8RTOS_kill_current_thread();     // thread improperly called
+    }
+
+    // index used to check for interaction between specific sections of screen
+    int index = -1;
+
+
+    // check if touch interacted with 'Back' button
+    index = TP_CheckForSectionPress( touch, section_compose_message_header_buttons,
+                                     (sizeof(section_compose_message_header_buttons)/sizeof(section_compose_message_header_buttons[0])));
+
+
+    // check if touch interacted with back button (IMPLEMENT)
+    if (index == BACK_BUTTON_INDEX)
+    {
+        //IMPLEMENT
+        // make sure to disable interrupts
+    }
+
+    // re-enable LCD Touch Panel interrupt and clear interrupt flag
+    GPIO_enableInterrupt(GPIO_PORT_P4, GPIO_PIN0);
+    GPIO_clearInterruptFlag(GPIO_PORT_P4, GPIO_PIN0);
+
+    // kill thread (rip)
+    G8RTOS_kill_current_thread();
+
+}
+
+/************************************************************************************
 * Name: thread_mumessage_compose_message
 * Purpose: Thread to draw Compose Message screen, and prepare for sending a
 *          message to another MuPhone user.
@@ -1277,10 +1777,11 @@ void thread_mumessage_compose_message(void)
                            (sizeof(text_section_keyboard1_no_click)/sizeof(text_section_keyboard1_no_click[0])));
 
 
+    // re-enable P4 interrupt
+    GPIO_enableInterrupt(GPIO_PORT_P4, GPIO_PIN0);
+
     /* add the necessary aperiodic thread for touches made to the LCD TouchPanel */
     G8RTOS_add_aperiodic_thread(aperiodic_mumessage_compose_message, PORT4_IRQn, 6);
-
-    phone.current_app = MUMESSAGE;
 
     G8RTOS_kill_current_thread();
 
@@ -1295,23 +1796,33 @@ void thread_mumessage_compose_message(void)
 ************************************************************************************/
 void thread_mumessage_compose_message_check_TP(void)
 {
-    // record touch made to the LCD TouchPanel
-    touch = TP_ReadXY();
+    // otherwise, touch was properly made to TouchPanel LCD
+    Point touch = TP_ReadXY();
 
-    // indexing variable used to determine what rectangle within specified section
-    // the touch interacted with (if none, index will equal -1)
+    // first debounce LCD
+    G8RTOS_thread_sleep(LCD_DEBOUNCE_TIME);
+
+    // check if triggering switch is high after debounce time
+    if ( P4->IN & PIN_TOUCHPANEL )
+    {
+         G8RTOS_kill_current_thread();     // thread improperly called
+    }
+
+
+    // index used to check for interaction between specific sections of screen
     int index = -1;
+
+
+    // check if touch interacted with 'Send' button
+    index = TP_CheckForSectionPress( touch, section_compose_message_header_buttons,
+                                     (sizeof(section_compose_message_header_buttons)/sizeof(section_compose_message_header_buttons[0])));
+
 
     // check if touch interacted with back button (IMPLEMENT)
     if (index == BACK_BUTTON_INDEX)
     {
         //IMPLEMENT
     }
-
-
-    // check if touch interacted with 'Send' button
-    index = TP_CheckForSectionPress( touch, section_compose_message_header_buttons,
-                                     (sizeof(section_compose_message_header_buttons)/sizeof(section_compose_message_header_buttons[0])));
 
     if (index == SEND_BUTTON_INDEX)     // send button was pressed
     {
@@ -1510,9 +2021,6 @@ void thread_mumessage_compose_message_check_TP(void)
                     LCD_DrawRectangleStructure(section_keyboard3_click[index]);
                     LCD_PrintTextStructure(text_section_keyboard3_click[index]);
 
-                    // delete characters at specified rate when holding delete key
-                    delete_character_wait();
-
                     delete_character();     // remove character based on current cursor position
 
                     // redraw key in original color
@@ -1600,9 +2108,6 @@ void thread_mumessage_compose_message_check_TP(void)
                     // show key was touched by redrawing key in specified color
                     LCD_DrawRectangleStructure(section_keyboard3_click[index]);
                     LCD_PrintTextStructure(text_section_keyboard3_click[index]);
-
-                    // delete characters at specified rate when holding delete key
-                    delete_character_wait();
 
                     delete_character();     // remove character based on current cursor position
 
@@ -1780,9 +2285,6 @@ void thread_mumessage_compose_message_check_TP(void)
 
     }
 
-    // debounce LCD TouchPanel (IMPLEMENT: THIS NEEDS ITS OWN THREAD)
-    G8RTOS_thread_sleep(TWO_TENTHS_SECOND_MS);
-
     // re-enable LCD Touch Panel interrupt and clear interrupt flag
     GPIO_enableInterrupt(GPIO_PORT_P4, GPIO_PIN0);
     GPIO_clearInterruptFlag(GPIO_PORT_P4, GPIO_PIN0);
@@ -1791,17 +2293,7 @@ void thread_mumessage_compose_message_check_TP(void)
     G8RTOS_kill_current_thread();
 }
 
-/************************************************************************************
-* Name: thread_mumessage_check_for_messages
-* Purpose: Background thread to check if new messages were received
-* Input(s): N/A
-* Output: N/A
-************************************************************************************/
-void thread_mumessage_check_for_messages(void)
-{
-    // IMPLEMENT!!
-}
-
+// TRY MAKING STATIC
 /************************************************************************************
 * Name: thread_mumessage_open_app
 * Purpose: Thread to open already initialized MuMessage application instance
@@ -1810,12 +2302,25 @@ void thread_mumessage_check_for_messages(void)
 ************************************************************************************/
 void thread_mumessage_open_app(void)
 {
-    // draw application visuals
+    /* draw main screen */
+    LCD_DrawSection(section_mumessage_main_screen,
+                        (sizeof(section_mumessage_main_screen)/sizeof(section_mumessage_main_screen[0])));
 
-    while(1)
-    {
+    LCD_DrawSection(section_mumessage_main_screen_buttons,
+                            (sizeof(section_mumessage_main_screen_buttons)/sizeof(section_mumessage_main_screen_buttons[0])));
 
-    }
+    LCD_PrintTextSection(text_section_mumessage_main_screen,
+                         (sizeof(text_section_mumessage_main_screen)/sizeof(text_section_mumessage_main_screen[0])));
+
+
+    // re-enable P4 interrupts to allow touches to be made to LCD TP
+    GPIO_enableInterrupt(GPIO_PORT_P4, GPIO_PIN0);
+
+    /* add aperiodic thread to detect touches made to the main screen */
+    G8RTOS_add_aperiodic_thread(aperiodic_mumessage_main_screen, PORT4_IRQn, 6);
+
+    // cya dood
+    G8RTOS_kill_current_thread();
 }
 
 /************************************************************************************
@@ -1828,35 +2333,43 @@ void thread_mumessage_open_app(void)
 void thread_mumessage_start_app(void)
 {
 
-    // initialize application instance
-
-    message_data.header_info.intended_app = MUMESSAGE;
-    message_data.header_info.size_of_data = 0; //initialize size to send to zero
-    phone.message_received = 0;
-
-    if(phone.self_contact == BRIT)
+    if (!applicationInitialized)
     {
-        message_data.to_and_from.contact = CHRIS; //talk to chris for now
-        message_data.to_and_from.contact_of_sender = BRIT;
-    }
-    else if(phone.self_contact == CHRIS)
-    {
-        message_data.to_and_from.contact = BRIT; //talk to host
-        message_data.to_and_from.contact_of_sender = CHRIS;
-    }
-    else if(phone.self_contact == WES)
-    {
-        message_data.to_and_from.contact = BRIT; //talk to host
-        message_data.to_and_from.contact_of_sender = WES;
+        //    // initialize application instance
+        //
+        //    message_data.header_info.intended_app = MUMESSAGE;
+        //    message_data.header_info.size_of_data = 0; //initialize size to send to zero
+        //    phone.message_received = 0;
+        //
+        //    if(phone.self_contact == BRIT)
+        //    {
+        //        message_data.to_and_from.contact = CHRIS; //talk to chris for now
+        //        message_data.to_and_from.contact_of_sender = BRIT;
+        //    }
+        //    else if(phone.self_contact == CHRIS)
+        //    {
+        //        message_data.to_and_from.contact = BRIT; //talk to host
+        //        message_data.to_and_from.contact_of_sender = CHRIS;
+        //    }
+        //    else if(phone.self_contact == WES)
+        //    {
+        //        message_data.to_and_from.contact = BRIT; //talk to host
+        //        message_data.to_and_from.contact_of_sender = WES;
+        //    }
+        //
+        //
+        //    // initialize each contact's current number of messages
+        //    for (uint8_t i = 0; i < MAX_NUMBER_OF_CONTACTS; i++)
+        //    {
+        //        message_log[i].current_number_of_messages = 0;
+        //    }
+
+            // message data should already be initialized to zero
     }
 
+    G8RTOS_add_thread(thread_mumessage_open_app, 180, "MM: open app");
 
-    // initialize each contact's current number of messages
-    for (uint8_t i = 0; i < MAX_NUMBER_OF_CONTACTS; i++)
-    {
-        message_log[i].current_number_of_messages = 0;
-    }
-    //message data should already be initialized to zero
+    phone.current_app = MUMESSAGE;      // set current app in phone (IMPLEMENT: DO THIS EVERYWHERE)
 
     G8RTOS_kill_current_thread();
 }

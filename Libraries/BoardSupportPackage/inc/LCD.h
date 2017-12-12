@@ -164,6 +164,16 @@ typedef struct Text {
 ////////////////////////////PUBLIC FUNCTION PROTOTYPES///////////////////////////////
 
 /*******************************************************************************
+ * Function Name  : 8bit_to_16bit
+ * Description    : convert an 8-bit color value into 16-bit color value
+ * Input          : uint8_t color
+ * Output         : None
+ * Return         : None
+ * Attention      :
+ *******************************************************************************/
+uint16_t LCD_8bit_to_16bit(uint8_t color);
+
+/*******************************************************************************
  * Function Name  : LCD_DrawRectangle
  * Description    : Draw a rectangle as the specified color
  * Input          : xStart, xEnd, yStart, yEnd, Color

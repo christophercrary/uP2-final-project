@@ -14,8 +14,6 @@
 #ifndef MUMESSAGE_H_
 #define MUMESSAGE_H_
 
-#include "Applications.h"
-#include "cc3100_usage.h"
 #include "muphone.h"        // used for general phone definitions
 
 /******************************* GENERAL DEFINES ***********************************/
@@ -26,6 +24,7 @@
 // wrap the screen on the compose message screen  and when to wrap the screen on the
 // message log screen
 #define VT                  11      // vertical tab
+#define ETX                 3
 
 
 #define COMMUNICATION_PROTOCOL_ACKNOWLEDGE              0x98
@@ -49,20 +48,21 @@
 #define CURSOR_HEIGHT       16
 #define CURSOR_COLOR        LCD_BLACK
 
-/************************** END OF GENERAL DEFINES *********************************/
-
-/************************** COMPOSE MESSAGE DEFINES ********************************/
-
-/* defined message constraints */
-#define MESSAGE_MIN_NUMBER_OF_CHARACTERS                    0
-#define MESSAGE_MAX_NUMBER_OF_CHARACTERS                    256
-
-#define COMPOSE_MESSAGE_CURSOR_X_MIN  TEXT_ARENA_X_MIN + 5
-#define COMPOSE_MESSAGE_CURSOR_X_MAX  317       // change
-#define COMPOSE_MESSAGE_CURSOR_Y_MIN  TEXT_ARENA_Y_MIN + 2      // not used with text arena only being one line
-#define COMPOSE_MESSAGE_CURSOR_Y_MAX  192        // not used with text arena only being one line
-
 /* defined color palette */
+
+/* message log */
+#define MESSAGE_LOG_BACKGROUND_COLOR                    LCD_WHITE
+#define MESSAGE_LOG_HEADER_COLOR                        LCD_LIGHT_GRAY
+#define MESSAGE_LOG_HEADER_DIVIDER_COLOR                LCD_BLACK
+#define MESSAGE_LOG_BACK_BUTTON_COLOR                   LCD_LIGHT_GRAY
+#define MESSAGE_LOG_BACK_BUTTON_TEXT_COLOR              LCD_BLACK
+#define MESSAGE_LOG_TEXT_ARENA_COLOR                    LCD_WHITE
+#define MESSAGE_LOG_MESSAGE_TEXT_COLOR                  LCD_BLACK
+#define MESSAGE_LOG_MESSAGE_BOX_BORDER_COLOR            LCD_BLACK
+#define MESSAGE_LOG_MESSAGE_BOX_SENT_COLOR              LCD_DARK_GREEN
+#define MESSAGE_LOG_MESSAGE_BOX_RECEIVED_COLOR          LCD_BLUE
+
+/* compose message */
 #define COMPOSE_MESSAGE_BACKGROUND_COLOR                    LCD_WHITE
 #define COMPOSE_MESSAGE_HEADER_COLOR                        LCD_LIGHT_GRAY
 #define COMPOSE_MESSAGE_HEADER_DIVIDER_COLOR                LCD_BLACK
@@ -81,6 +81,61 @@
 #define KEYBOARD_KEY_TEXT_NO_CLICK_COLOR                    LCD_BLACK
 #define KEYBOARD_KEY_CLICK_COLOR                            LCD_DARK_BLUE
 #define KEYBOARD_KEY_TEXT_CLICK_COLOR                       LCD_WHITE
+
+
+/************************** END OF GENERAL DEFINES *********************************/
+
+// button indices for demo screen
+#define COMPOSE_MESSAGE_BUTTON_INDEX           0
+#define MESSAGE_LOG_BUTTON_INDEX               1
+
+#define MUMESSAGE_MAIN_SCREEN_COLOR                                         LCD_DARK_GRAY
+#define MUMESSAGE_MAIN_SCREEN_COMPOSE_MESSAGE_BUTTON_COLOR                  LCD_LIGHT_GRAY
+#define MUMESSAGE_MAIN_SCREEN_MESSAGE_LOG_BUTTON_COLOR                      LCD_LIGHT_GRAY
+#define MUMESSAGE_MAIN_SCREEN_INTRO_TEXT_COLOR                              LCD_BLACK
+#define MUMESSAGE_MAIN_SCREEN_BUTTON_TEXT_COLOR                             LCD_BLACK
+
+/* boundaries for MuPhone intro screen */
+#define MUMESSAGE_MAIN_SCREEN_X_MIN                   LCD_SCREEN_X_MIN
+#define MUMESSAGE_MAIN_SCREEN_X_MAX                   LCD_SCREEN_X_MAX
+#define MUMESSAGE_MAIN_SCREEN_Y_MIN                   (MUPHONE_HEADER_BAR_DIVIDER_Y_MAX + 1)
+#define MUMESSAGE_MAIN_SCREEN_Y_MAX                   LCD_SCREEN_Y_MAX
+
+#define MUMESSAGE_MAIN_SCREEN_INTRO_TEXT_X_START      5
+#define MUMESSAGE_MAIN_SCREEN_INTRO_TEXT_Y_START      MUMESSAGE_MAIN_SCREEN_Y_MIN+10
+
+#define MAIN_SCREEN_BUTTON_X_OFFSET                             70
+#define MAIN_SCREEN_BUTTON_TEXT_Y_OFFSET                        10
+#define MAIN_SCREEN_BUTTON_WIDTH                                140
+#define MAIN_SCREEN_BUTTON_HEIGHT                               40
+
+#define MUMESSAGE_MAIN_SCREEN_COMPOSE_MESSAGE_BUTTON_X_MIN                   (((MUMESSAGE_MAIN_SCREEN_X_MAX - MUMESSAGE_MAIN_SCREEN_X_MIN) >> 1) - MAIN_SCREEN_BUTTON_X_OFFSET)
+#define MUMESSAGE_MAIN_SCREEN_COMPOSE_MESSAGE_BUTTON_X_MAX                   (MUMESSAGE_MAIN_SCREEN_COMPOSE_MESSAGE_BUTTON_X_MIN + MAIN_SCREEN_BUTTON_WIDTH)
+#define MUMESSAGE_MAIN_SCREEN_COMPOSE_MESSAGE_BUTTON_Y_MIN                   80
+#define MUMESSAGE_MAIN_SCREEN_COMPOSE_MESSAGE_BUTTON_Y_MAX                   (MUMESSAGE_MAIN_SCREEN_COMPOSE_MESSAGE_BUTTON_Y_MIN + MAIN_SCREEN_BUTTON_HEIGHT)
+
+#define MUMESSAGE_MAIN_SCREEN_COMPOSE_MESSAGE_BUTTON_TEXT_X_START            (MUMESSAGE_MAIN_SCREEN_COMPOSE_MESSAGE_BUTTON_X_MIN + ((MAIN_SCREEN_BUTTON_WIDTH - (LCD_TEXT_WIDTH * 15)) >> 1))
+#define MUMESSAGE_MAIN_SCREEN_COMPOSE_MESSAGE_BUTTON_TEXT_Y_START            (MUMESSAGE_MAIN_SCREEN_COMPOSE_MESSAGE_BUTTON_Y_MIN + MAIN_SCREEN_BUTTON_TEXT_Y_OFFSET)
+
+#define MUMESSAGE_MAIN_SCREEN_MESSAGE_LOG_BUTTON_X_MIN                   (((MUMESSAGE_MAIN_SCREEN_X_MAX - MUMESSAGE_MAIN_SCREEN_X_MIN) >> 1) - MAIN_SCREEN_BUTTON_X_OFFSET)
+#define MUMESSAGE_MAIN_SCREEN_MESSAGE_LOG_BUTTON_X_MAX                   (MUMESSAGE_MAIN_SCREEN_MESSAGE_LOG_BUTTON_X_MIN + MAIN_SCREEN_BUTTON_WIDTH)
+#define MUMESSAGE_MAIN_SCREEN_MESSAGE_LOG_BUTTON_Y_MIN                   130
+#define MUMESSAGE_MAIN_SCREEN_MESSAGE_LOG_BUTTON_Y_MAX                   (MUMESSAGE_MAIN_SCREEN_MESSAGE_LOG_BUTTON_Y_MIN + MAIN_SCREEN_BUTTON_HEIGHT)
+
+#define MUMESSAGE_MAIN_SCREEN_MESSAGE_LOG_BUTTON_TEXT_X_START            (MUMESSAGE_MAIN_SCREEN_MESSAGE_LOG_BUTTON_X_MIN + ((MAIN_SCREEN_BUTTON_WIDTH - (LCD_TEXT_WIDTH * 11)) >> 1))
+#define MUMESSAGE_MAIN_SCREEN_MESSAGE_LOG_BUTTON_TEXT_Y_START            (MUMESSAGE_MAIN_SCREEN_MESSAGE_LOG_BUTTON_Y_MIN + MAIN_SCREEN_BUTTON_TEXT_Y_OFFSET)
+
+
+/************************** COMPOSE MESSAGE DEFINES ********************************/
+
+/* defined message constraints */
+#define MESSAGE_MIN_NUMBER_OF_CHARACTERS                    0
+#define MESSAGE_MAX_NUMBER_OF_CHARACTERS                    256
+
+#define COMPOSE_MESSAGE_CURSOR_X_MIN  TEXT_ARENA_X_MIN + 5
+#define COMPOSE_MESSAGE_CURSOR_X_MAX  317       // change
+#define COMPOSE_MESSAGE_CURSOR_Y_MIN  TEXT_ARENA_Y_MIN + 2      // not used with text arena only being one line
+#define COMPOSE_MESSAGE_CURSOR_Y_MAX  192        // not used with text arena only being one line
 
 /* boundaries of compose message background */
 #define COMPOSE_MESSAGE_BACKGROUND_X_MIN            LCD_SCREEN_X_MIN
@@ -1284,6 +1339,65 @@
 /************************* END OF COMPOSE MESSAGE DEFINES **************************/
 
 
+/****************************** MESSAGE LOG DEFINES ********************************/
+
+/* boundaries of compose message background */
+#define MESSAGE_LOG_BACKGROUND_X_MIN            LCD_SCREEN_X_MIN
+#define MESSAGE_LOG_BACKGROUND_X_MAX            LCD_SCREEN_X_MAX
+#define MESSAGE_LOG_BACKGROUND_Y_MIN            (MUPHONE_HEADER_BAR_Y_MAX + 1)
+#define MESSAGE_LOG_BACKGROUND_Y_MAX            LCD_SCREEN_Y_MAX
+
+/* boundaries of message log text arena */
+#define MESSAGE_LOG_TEXT_ARENA_X_MIN        LCD_SCREEN_X_MIN
+#define MESSAGE_LOG_TEXT_ARENA_X_MAX        LCD_SCREEN_X_MAX
+#define MESSAGE_LOG_TEXT_ARENA_Y_MIN        (MESSAGE_LOG_HEADER_DIVIDER_Y_MAX + 1)
+#define MESSAGE_LOG_TEXT_ARENA_Y_MAX        LCD_SCREEN_Y_MAX
+
+/* boundaries of compose message header */
+#define MESSAGE_LOG_HEADER_WIDTH            (LCD_SCREEN_X_MAX - LCD_SCREEN_X_MIN)
+#define MESSAGE_LOG_HEADER_HEIGHT           20
+#define MESSAGE_LOG_HEADER_X_MIN            LCD_SCREEN_X_MIN
+#define MESSAGE_LOG_HEADER_X_MAX            (LCD_SCREEN_X_MIN + COMPOSE_MESSAGE_HEADER_WIDTH)
+#define MESSAGE_LOG_HEADER_Y_MIN            MESSAGE_LOG_BACKGROUND_Y_MIN
+#define MESSAGE_LOG_HEADER_Y_MAX            (MESSAGE_LOG_HEADER_Y_MIN + MESSAGE_LOG_HEADER_HEIGHT)
+
+#define MESSAGE_LOG_HEADER_DIVIDER_WIDTH        (MESSAGE_LOG_HEADER_X_MAX - MESSAGE_LOG_HEADER_X_MIN)
+#define MESSAGE_LOG_HEADER_DIVIDER_HEIGHT       1
+#define MESSAGE_LOG_HEADER_DIVIDER_X_MIN        MESSAGE_LOG_HEADER_X_MIN
+#define MESSAGE_LOG_HEADER_DIVIDER_X_MAX        (MESSAGE_LOG_HEADER_DIVIDER_X_MIN + MESSAGE_LOG_HEADER_DIVIDER_WIDTH)
+#define MESSAGE_LOG_HEADER_DIVIDER_Y_MIN        (MESSAGE_LOG_HEADER_Y_MAX + 1)
+#define MESSAGE_LOG_HEADER_DIVIDER_Y_MAX        (MESSAGE_LOG_HEADER_DIVIDER_Y_MIN + MESSAGE_LOG_HEADER_DIVIDER_HEIGHT)
+
+#define MESSAGE_LOG_BACK_BUTTON_OFFSET      2       // spacing used for edges of button
+#define MESSAGE_LOG_BACK_BUTTON_WIDTH       50
+#define MESSAGE_LOG_BACK_BUTTON_HEIGHT      18
+#define MESSAGE_LOG_BACK_BUTTON_X_MIN       (MESSAGE_LOG_HEADER_DIVIDER_X_MIN + (MESSAGE_LOG_BACK_BUTTON_OFFSET * 1))
+#define MESSAGE_LOG_BACK_BUTTON_X_MAX       (MESSAGE_LOG_BACK_BUTTON_X_MIN + MESSAGE_LOG_BACK_BUTTON_WIDTH)
+#define MESSAGE_LOG_BACK_BUTTON_Y_MIN       MESSAGE_LOG_HEADER_Y_MIN
+#define MESSAGE_LOG_BACK_BUTTON_Y_MAX       (MESSAGE_LOG_BACK_BUTTON_Y_MIN + MESSAGE_LOG_BACK_BUTTON_HEIGHT)
+
+#define MESSAGE_LOG_BACK_BUTTON_TEXT_X_OFFSET       0
+#define MESSAGE_LOG_BACK_BUTTON_TEXT_Y_OFFSET       2
+#define MESSAGE_LOG_BACK_BUTTON_TEXT_X_START        (MESSAGE_LOG_BACK_BUTTON_X_MIN + MESSAGE_LOG_BACK_BUTTON_TEXT_X_OFFSET)
+#define MESSAGE_LOG_BACK_BUTTON_TEXT_Y_START        (MESSAGE_LOG_BACK_BUTTON_Y_MIN + MESSAGE_LOG_BACK_BUTTON_TEXT_Y_OFFSET)
+
+/* boundaries of message boxes */
+#define MESSAGE_LOG_MESSAGE_ROW_MAX_NUMBER_OF_CHARACTERS            31      // IMPLEMENT: CHANGE TO BE COMPOSE_MESSAGE_MAX_NUMBER_OF_CHARS
+#define MESSAGE_LOG_MESSAGE_BOX_EDGE_OFFSET                         8           // vertical spacing on bottom of screen
+#define MESSAGE_LOG_MESSAGE_BOX_Y_OFFSET                            15          // vertical spacing between messages
+#define MESSAGE_LOG_MESSAGE_BOX_RECEIVED_X_MIN                     LCD_SCREEN_X_MIN
+#define MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX                         LCD_SCREEN_X_MAX
+#define MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET                       2
+
+/* boundaries of message text */
+#define MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET                            10
+#define MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET                            5
+#define MESSAGE_LOG_MESSAGE_RECEIVED_TEXT_X_MIN                          (LCD_SCREEN_X_MIN + MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET)
+#define MESSAGE_LOG_MESSAGE_SENT_TEXT_X_MIN                         (LCD_SCREEN_X_MAX - MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET - (LCD_TEXT_WIDTH * MESSAGE_LOG_MESSAGE_ROW_MAX_NUMBER_OF_CHARACTERS))
+
+/*************************** END OF MESSAGE LOG DEFINES ****************************/
+
+
 
 ////////////////////////////////END OF DEFINES///////////////////////////////////////
 
@@ -1360,12 +1474,46 @@ static inline void app_init(void);
  ***********************************************************************************/
 void aperiodic_mumessage_compose_message(void);
 
+/************************************************************************************
+ * Name: aperiodic_mumessage_main_screen
+ * Purpose: Aperiodic event created after the initial display of the main screen
+ *          screen upon MuMessage opening. If a valid touch was made to the LCD TouchPanel,
+ *          a thread for checking what section of the screen was pressed will be
+ *          created.
+ * Input(s): N/A
+ * Output: N/A
+ ***********************************************************************************/
+void aperiodic_mumessage_main_screen(void);
+
+/************************************************************************************
+ * Name: aperiodic_mumessage_message_log
+ * Purpose: Aperiodic event created after the initial display of the Message Log
+ *          screen within MuMessage. If a valid touch was made to the LCD TouchPanel,
+ *          a thread for checking what section of the screen was pressed will be
+ *          created.
+ * Input(s): N/A
+ * Output: N/A
+ ***********************************************************************************/
+void aperiodic_mumessage_message_log(void);
+
+
+
 /************************** END OF APERIODIC THREADS *******************************/
 
 
 /******************************* COMMON THREADS ************************************/
 
 /* general threads */
+
+/************************************************************************************
+* Name: thread_mumessage_main_screen_check_TP
+* Purpose: Thread to check if touch made to LCD TouchPanel interacted with any
+*          predefined sections on the main screen of the MuMessage app.
+* Input(s): N/A
+* Output: N/A
+************************************************************************************/
+void thread_mumessage_main_screen_check_TP(void);
+
 /************************************************************************************
 * Name: thread_mumessage_background_processes
 * Purpose: Thread to initialize MuMessage background processes, including but not
@@ -1375,6 +1523,25 @@ void aperiodic_mumessage_compose_message(void);
 * Output: N/A
 ************************************************************************************/
 void thread_mumessage_background_processes(void);
+
+/* threads for Message Log */
+
+/************************************************************************************
+* Name: thread_mumessage_message_log
+* Purpose: Thread to draw message log screen
+* Input(s): N/A
+* Output: N/A
+************************************************************************************/
+void thread_mumessage_message_log(void);
+
+/************************************************************************************
+* Name: thread_mumessage_message_log_check_TP
+* Purpose: Thread to check if touch made to LCD TouchPanel interacted with any
+*          predefined sections in the Compose Message screen of MuMessage.
+* Input(s): N/A
+* Output: N/A
+************************************************************************************/
+void thread_mumessage_message_log_check_TP(void);
 
 /* threads for Compose Message */
 
@@ -1395,15 +1562,6 @@ void thread_mumessage_compose_message(void);
 * Output: N/A
 ************************************************************************************/
 void thread_mumessage_compose_message_check_TP(void);
-
-
-/************************************************************************************
-* Name: thread_mumessage_check_for_messages
-* Purpose: Background thread to check if new messages were received
-* Input(s): N/A
-* Output: N/A
-************************************************************************************/
-void thread_mumessage_check_for_messages(void);
 
 /************************************************************************************
 * Name: thread_mumessage_open_app

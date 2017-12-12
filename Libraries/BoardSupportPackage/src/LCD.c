@@ -146,6 +146,36 @@ static uint16_t TP_ReadADC(uint8_t channel)
 /************************************  Public Functions  *******************************************/
 
 /*******************************************************************************
+ * Function Name  : 8bit_to_16bit
+ * Description    : convert an 8-bit color value into 16-bit color value
+ * Input          : uint8_t color
+ * Output         : None
+ * Return         : None
+ * Attention      :
+ *******************************************************************************/
+uint16_t LCD_8bit_to_16bit(uint8_t color)
+{
+    uint8_t red8 = (color >> 5) & 0b00000111;
+    uint8_t green8 = (color >> 2) & 0b00000111;
+    uint8_t blue8 = (color >> 0) & 0b00000011;
+
+    uint16_t red16 = (red8 * 0b00011111)/(0b00000111);
+    uint16_t green16 = (green8 * 0b00111111)/(0b00000111);
+    uint16_t blue16 = (blue8 * 0b00011111)/(0b00000011);
+
+    return ((red16 << 11) | (green16 << 5) | blue16);
+}
+
+/*******************************************************************************
+ * Function Name  : LCD_DrawImage
+ * Description    : Draw an image
+ * Input          : uint8_t image
+ * Output         : None
+ * Return         : None
+ * Attention      :
+ *******************************************************************************/
+
+/*******************************************************************************
  * Function Name  : LCD_DrawRectangle
  * Description    : Draw a rectangle as the specified color.
  *                  NOTE: This function truncates rectangles that are
