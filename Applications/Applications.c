@@ -46,6 +46,8 @@ void thread_init_host_wifi()
      //G8RTOS_add_thread(thread_receive_data, 50, "Receive data");
      phone.IP_address = HOST_IP_ADDR;
 
+     G8RTOS_add_thread(thread_receive_data, 40, "receiveData"); //add background receive wifi thread
+
      G8RTOS_kill_current_thread();
 
 }
@@ -74,6 +76,7 @@ void thread_init_client_wifi()
     phone.IP_address = client1.IP_address;
 
   //  G8RTOS_add_thread(thread_receive_data, 50, "Receive data");
+     G8RTOS_add_thread(thread_receive_data, 40, "receiveData"); //add background receive wifi thread
 
     G8RTOS_kill_current_thread();
 
@@ -93,11 +96,11 @@ void thread_receive_data()
     {
         if(phone.current_app == HOME_SCREEN)
         {
-            sleep_time = 2000; //500 ms sleep time
+            sleep_time = 50; //500 ms sleep time
         }
         else if(phone.current_app == MUMESSAGE)
         {
-            sleep_time = 100;
+            sleep_time = 50;
         }
         else if(phone.current_app == PONG)
         {

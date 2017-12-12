@@ -356,6 +356,8 @@ static inline void muphone_init(void)
     /* add the necessary starting threads */
     G8RTOS_add_thread(thread_muphone_idle, 200, "idle");
 
+    //add wifi connectivity
+
     /* launch final demo screen */
     demo_init();
 
@@ -512,17 +514,27 @@ void thread_muphone_demo_screen_check_TP(void)
         {
             phone.self_contact = BRIT;
             phone.board_type = Host;
-            //G8RTOS_add_thread(thread_init_host_wifi, 30, "initHostWifi");
+            G8RTOS_add_thread(thread_init_host_wifi, 30, "initHostWifi");
+           // G8RTOS_add_thread(thread_receive_data, 60, "receiveData");
+
+
         }
         else if (index == CHRIS_BUTTON_INDEX)
         {
             phone.self_contact = CHRIS;
             phone.board_type = Client;
-            //G8RTOS_add_thread(thread_init_client_wifi, 30, "initClientWifi");
+            G8RTOS_add_thread(thread_init_client_wifi, 30, "initClientWifi");
+            //G8RTOS_add_thread(thread_receive_data, 60, "receiveData");
+
+
+        }
+        else
+        {
+            G8RTOS_thread_sleep(300);
         }
 
         // initialize necessary MuPhone system criteria
-        //G8RTOS_semaphore_init(&semaphore_CC3100, 1);
+        G8RTOS_semaphore_init(&semaphore_CC3100, 1);
 
         G8RTOS_add_thread(thread_muphone_start_phone, 50, "muphone - start");
 
@@ -530,7 +542,6 @@ void thread_muphone_demo_screen_check_TP(void)
         G8RTOS_add_thread(thread_mumessage_background_processes, 150, "mumessage - b.p.");
 
         // globally receive data, and then decide which application to send data to
-        //G8RTOS_add_thread(thread_receive_data, 40, "receiveData");
     }
     else        // otherwise, allow future touches to be made to LCD TP
     {

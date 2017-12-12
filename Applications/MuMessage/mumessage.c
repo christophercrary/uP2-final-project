@@ -874,6 +874,7 @@ char message5[256] =
 
 char *message_array[5] = {message1, message2, message3, message4, message5};
 
+
 uint8_t messageStatus[5] = {0, 1, 0, 1, 1};
 
 /************************ END OF MESSAGE LOG MEMBERS *********************************/
@@ -1059,6 +1060,11 @@ static inline void delete_character()
 ************************************************************************************/
 static inline void send_message(Board_Type_t board_type, Intended_Recipient_t contact)
 {
+    if(message_data.header_info.size_of_data == 0)
+    {
+        return;
+    }
+
 
     uint32_t ip_address;
     if(contact == BRIT)
@@ -1073,19 +1079,19 @@ static inline void send_message(Board_Type_t board_type, Intended_Recipient_t co
         //sending data from host to client
         ip_address = client1.IP_address; //CURRENTLY ONLY FOR FIRST CLIENT IMPLEMENT OTHER CLIENT LATER
     }
-    else if(contact == WES)
-    {
-        ip_address = client2.IP_address;
-    }
+   // else if(contact == WES)
+    //{
+     //   ip_address = client2.IP_address;
+    //}
 
     // end message by appending ETX (end of text, 3)
     message_data.message[current_message_index] = 3;
-  
+    message_data.header_info.size_of_data++;
     G8RTOS_semaphore_wait(&semaphore_CC3100);
 
     SendData((uint8_t*)&message_data.header_info, ip_address, sizeof(message_data.header_info)); //send header info
     SendData((uint8_t*)&message_data.to_and_from, ip_address, sizeof(message_data.to_and_from)); //send contact information (who I am trying to communicate with and who I am)
-    SendData((uint8_t*)&message_data.message[contact], ip_address, (message_data.header_info.size_of_data)); //send actual message
+    SendData((uint8_t*)&message_data.message[0], ip_address, (message_data.header_info.size_of_data)); //send actual message
 
     G8RTOS_semaphore_signal(&semaphore_CC3100);
 
@@ -1096,52 +1102,9 @@ static inline void send_message(Board_Type_t board_type, Intended_Recipient_t co
     }
 
     // mark message as sent
-    message_log[contact].message_history[message_log[contact].current_number_of_messages].message_status[message_log[contact].current_number_of_messages++] = SENT;
+    message_log[contact].message_history[message_log[contact].current_number_of_messages].message_status = SENT;
 }
 
-
-
-/************************************************************************************
-* Name: Pass_Message_Along
-* Purpose: Helper function to send message to client when a client is trying to communicate with another client
-* Input(s): Board_Type_t that defines who the message is meant to be sent to, contact is who the baord is trying to communicate with,
-*           buffer is the data to be sent, and buffer_size is the size of the buffer
-* Output: N/A
-* NOTE: This inline functions waits and signals semaphore_CC3100
-************************************************************************************/
-static inline void Pass_Message_Along(Board_Type_t board_type, Intended_Recipient_t contact, char buffer[] , uint32_t buffer_size)
-{
-    uint32_t ip_address;
-    if(contact == BRIT)
-    {
-        //BRIT WILL ALWAYS BE HOST
-        //send message to host from client
-         ip_address = HOST_IP_ADDR;
-    }
-
-    else if(contact == CHRIS)
-    {
-        //sending data from host to client
-        ip_address = client1.IP_address; //CURRENTLY ONLY FOR FIRST CLIENT IMPLEMENT OTHER CLIENT LATER
-    }
-    else if(contact == WES)
-    {
-        ip_address = client2.IP_address;
-    }
-
-    // end message by appending ETX (end of text, 3)
-    message_data.message[current_message_index] = 3;
-
-    G8RTOS_semaphore_wait(&semaphore_CC3100);
-
-    SendData((uint8_t*)&message_data.header_info, ip_address, sizeof(message_data.header_info)); //send header info
-    SendData((uint8_t*)&message_data.to_and_from, ip_address, sizeof(message_data.to_and_from)); //send contact information (who I am trying to communicate with and who I am)
-    SendData((uint8_t*)&buffer, ip_address, buffer_size); //send actual message
-
-    G8RTOS_semaphore_signal(&semaphore_CC3100);
-
-    //DO NOT LOG THIS MESSAGE, WAS NOT MEANT FOR THE HOST TO RECEIVE
-}
 
 
 
@@ -1413,6 +1376,16 @@ void thread_mumessage_background_processes(void)
 ************************************************************************************/
 static void print_messages(int *message_history_index, uint8_t *number_of_messages_printed)
 {
+
+    Intended_Recipient_t contact;
+    if(phone.self_contact == CHRIS)
+    {
+        contact = BRIT;
+    }
+    else if(phone.self_contact == BRIT)
+    {
+        contact = CHRIS;
+    }
     // reset counter for number of messages printed
     (*number_of_messages_printed) = 0;
 
@@ -1437,7 +1410,8 @@ static void print_messages(int *message_history_index, uint8_t *number_of_messag
         do
         {
             // read character from message
-            temp_char = message_array[*message_history_index][index++];
+            //temp_char = message_array[*message_history_index][index++];
+            temp_char = message_log[contact].message_history[*message_history_index].old_message[index++];
 
             if (temp_char != ETX)        // ignore end of text characters from message
             {
@@ -1488,7 +1462,8 @@ static void print_messages(int *message_history_index, uint8_t *number_of_messag
 
         /* draw either sent or sent message, based on who message belongs to (IMPLEMENT) */
 
-        if (messageStatus[*message_history_index])       // if message was received
+ //       if (messageStatus[*message_history_index])       // if message was received
+        if(message_log[contact].message_history[*message_history_index].message_status)
         {
             /* draw received message */
 
@@ -1518,7 +1493,9 @@ static void print_messages(int *message_history_index, uint8_t *number_of_messag
             do
             {
                 // read character from message
-                temp_char = message_array[*message_history_index][index++];
+               // temp_char = message_array[*message_history_index][index++];
+                  temp_char = message_log[contact].message_history[*message_history_index].old_message[index++];
+
 
                 if (temp_char != ETX)        // ignore end of text characters from message
                 {
@@ -1575,7 +1552,8 @@ static void print_messages(int *message_history_index, uint8_t *number_of_messag
             do
             {
                 // read character from message
-                temp_char = message_array[*message_history_index][index++];
+               // temp_char = message_array[*message_history_index][index++];
+                temp_char = message_log[contact].message_history[*message_history_index].old_message[index++];
 
                 if (temp_char != ETX)        // ignore end of text characters from message
                 {
@@ -1749,7 +1727,7 @@ void thread_mumessage_compose_message(void)
 
     // initialize keyboard to keyboard #1 (keyboard = 0)
     keyboard = 0;
-    phone.current_app = HOME_SCREEN;
+    phone.current_app = MUMESSAGE;
     /* draw Compose Message screen visuals */
 
     LCD_DrawSection(section_compose_message_background,
@@ -1776,7 +1754,8 @@ void thread_mumessage_compose_message(void)
     LCD_PrintTextSection(text_section_keyboard1_no_click,
                            (sizeof(text_section_keyboard1_no_click)/sizeof(text_section_keyboard1_no_click[0])));
 
-
+    message_data.header_info.intended_app = MUMESSAGE;
+    message_data.header_info.size_of_data = 0;
     // re-enable P4 interrupt
     GPIO_enableInterrupt(GPIO_PORT_P4, GPIO_PIN0);
 
@@ -2319,6 +2298,20 @@ void thread_mumessage_open_app(void)
     /* add aperiodic thread to detect touches made to the main screen */
     G8RTOS_add_aperiodic_thread(aperiodic_mumessage_main_screen, PORT4_IRQn, 6);
 
+
+    if(phone.self_contact == BRIT)
+    {
+        message_data.to_and_from.contact = CHRIS; //talk to chris for now
+        message_data.to_and_from.contact_of_sender = BRIT;
+
+    }
+    else if(phone.self_contact == CHRIS)
+    {
+        message_data.to_and_from.contact = BRIT; //talk to chris for now
+        message_data.to_and_from.contact_of_sender = CHRIS;
+
+    }
+
     // cya dood
     G8RTOS_kill_current_thread();
 }
@@ -2367,6 +2360,8 @@ void thread_mumessage_start_app(void)
             // message data should already be initialized to zero
     }
 
+
+
     G8RTOS_add_thread(thread_mumessage_open_app, 180, "MM: open app");
 
     phone.current_app = MUMESSAGE;      // set current app in phone (IMPLEMENT: DO THIS EVERYWHERE)
@@ -2375,31 +2370,7 @@ void thread_mumessage_start_app(void)
 }
 
 
-/*
-// test threads to test wifi communication
-void thread_send_message_data()
-{
-    //Intended_Data_t intended_data = MUMESSAGE;
-    Message_Data_t message_data;
-    char test[7] = "TESTING";
-    for(int i = 0 ; i < 7 ; i++)
-    {
-        message_data.new_message[0][i] = test[i];
-    }
-
-    while(1)
-    {
-        G8RTOS_semaphore_wait(&semaphore_CC3100);
-
-        SendData((uint8_t*)&intended_data, HOST_IP_ADDR, sizeof(intended_data));
-        SendData((uint8_t*)&message_data.new_message[0], HOST_IP_ADDR, sizeof(message_data.new_message[0]));
-        G8RTOS_semaphore_signal(&semaphore_CC3100);
-
-        G8RTOS_thread_sleep(500); //sleep for a second
-    }
-}
-*/
-//should just run once, then
+//this thread is added when the intended app in the header byte is mumessage
 void thread_receive_message_data()
 {
 
@@ -2412,31 +2383,6 @@ void thread_receive_message_data()
 
     G8RTOS_semaphore_signal(&semaphore_CC3100);            //do something
 
- /*
-    if(temp_contacts.contact != phone.self_contact)
-    {
-
-        //send data to correct client
-        G8RTOS_semaphore_wait(&semaphore_CC3100);
-        if(temp_contacts.contact == CHRIS)
-        {
-            Pass_Message_Along(Client, CHRIS, temp_buffer, sizeof(temp_buffer));
-
-           // send_message(Client, WES); //send to other client
-
-        }
-        else if(temp_contacts.contact == WES)
-        {
-            Pass_Message_Along(Client, WES, temp_buffer, sizeof(temp_buffer));
-
-           // send_message(Client, CHRIS); //send to other client
-
-        }
-
-        G8RTOS_semaphore_signal(&semaphore_CC3100);            //do something
-    }
-
-*/
     // update MuMessage's header byte info
     message_data.header_info.size_of_data = phone.header_data.size_of_data;
 
@@ -2447,21 +2393,11 @@ void thread_receive_message_data()
         message_log[temp_contacts.contact_of_sender].message_history[message_log[temp_contacts.contact_of_sender].current_number_of_messages].old_message[i] = temp_buffer[i];
     }
 
-    // mark message as sent
-    message_log[temp_contacts.contact_of_sender].message_history[message_log[temp_contacts.contact_of_sender].current_number_of_messages].message_status[message_log[temp_contacts.contact_of_sender].current_number_of_messages++] = RECEIVED;
+    // mark message as received
+    message_log[temp_contacts.contact_of_sender].message_history[message_log[temp_contacts.contact_of_sender].current_number_of_messages].message_status = RECEIVED;
 
 
     unread_message_count++;     // TESTING new message notification, need to reset if click on message log
-
-    //phone.message_received++;
-    //}
-
-
-
-
-
-
-
 
 
     G8RTOS_kill_current_thread(); //kill thread
