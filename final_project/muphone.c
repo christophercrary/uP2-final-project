@@ -1018,7 +1018,6 @@ static inline void muphone_init(void)
      {
          G8RTOS_kill_pet((periodic_threads_to_kill[thread_blink_cursor_enum]));
          periodic_threads_to_kill[thread_blink_cursor_enum]=0;
-         LCD_DrawRectangle(cursor.x, (cursor.x + CURSOR_OFFSET), cursor.y, (cursor.y + CURSOR_HEIGHT), COMPOSE_MESSAGE_TEXT_ARENA_COLOR);
      }
 }
 
@@ -1172,18 +1171,12 @@ void thread_muphone_demo_screen_check_TP(void)
             phone.self_contact = BRIT;
             phone.board_type = Host;
             G8RTOS_add_thread(thread_init_host_wifi, 30, "initHostWifi");
-           // G8RTOS_add_thread(thread_receive_data, 60, "receiveData");
         }
         else if (index == CHRIS_BUTTON_INDEX)
         {
             phone.self_contact = CHRIS;
             phone.board_type = Client;
             G8RTOS_add_thread(thread_init_client_wifi, 30, "initClientWifi");
-            //G8RTOS_add_thread(thread_receive_data, 60, "receiveData");
-        }
-        else
-        {
-            G8RTOS_thread_sleep(300);
         }
 
         // initialize necessary MuPhone system criteria

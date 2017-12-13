@@ -2147,6 +2147,7 @@ void thread_mumessage_message_log_check_TP(void)
 
         /* kill Message Log (IMPLEMENT) */
         kill_mumessage_threads();
+        LCD_DrawRectangle(cursor.x, (cursor.x + CURSOR_OFFSET), cursor.y, (cursor.y + CURSOR_HEIGHT), COMPOSE_MESSAGE_TEXT_ARENA_COLOR);
         /* return to MuMessage main screen */
         G8RTOS_add_thread(thread_mumessage_open_app, 180, "MM: open app");
 
@@ -2261,12 +2262,10 @@ void thread_mumessage_compose_message_check_TP(void)
     {
         /* kill Compose Message (IMPLEMENT) */
         /* kill Message Log (IMPLEMENT) */
-<<<<<<< HEAD
 
-=======
         G8RTOS_disable_aperiodic_thread(PORT4_IRQn); //disbale aperiodic thread to not write the screen again
         kill_mumessage_threads();
->>>>>>> 3f9467b3f08f30219977ce66ef2d32bc47e91ff1
+        LCD_DrawRectangle(cursor.x, (cursor.x + CURSOR_OFFSET), cursor.y, (cursor.y + CURSOR_HEIGHT), COMPOSE_MESSAGE_TEXT_ARENA_COLOR);
         /* return to MuMessage main screen */
         G8RTOS_add_thread(thread_mumessage_open_app, 180, "MM: open app");
         G8RTOS_kill_current_thread();
@@ -2777,7 +2776,6 @@ void thread_mumessage_open_app(void)
     /* add aperiodic thread to detect touches made to the main screen */
     G8RTOS_add_aperiodic_thread(aperiodic_mumessage_main_screen, PORT4_IRQn, 6);
 
-   // G8RTOS_add_thread(thread_blink_cursor, 50, "blink Cursor");
 
     if(phone.self_contact == BRIT)
     {
@@ -2845,7 +2843,6 @@ void thread_mumessage_start_app(void)
     /* start main screen of MuMessage */
 
     G8RTOS_add_thread(thread_mumessage_open_app, 180, "MM: open app");
-    //G8RTOS_add_thread(thread_blink_cursor, 50, "blink Cursor");
     phone.current_app = MUMESSAGE;      // set current app in phone (IMPLEMENT: DO THIS EVERYWHERE)
 
     G8RTOS_kill_current_thread();
@@ -2889,71 +2886,6 @@ void thread_receive_message_data()
 
 
     G8RTOS_kill_current_thread(); //kill thread
-}
-
-<<<<<<< HEAD
-=======
-
-void thread_blink_cursor()
-{
-
-
-    while(1)
-    {
-
-      //  if(back_button_pressed)
-       // {
-        //    back_button_pressed = false;
-        //    G8RTOS_kill_current_thread();
-        //}
-        G8RTOS_semaphore_wait(&semaphore_cursor);
-
-        if(cursor_color == COMPOSE_MESSAGE_BACKGROUND_COLOR)
-        {
-            LCD_DrawRectangle(cursor.x, cursor.x+CURSOR_WIDTH, TEXT_ARENA_Y_MIN + 2, TEXT_ARENA_Y_MIN + 2 + CURSOR_HEIGHT, CURSOR_COLOR);
-            cursor_color = CURSOR_COLOR;
-        }
-        else
-        {
-            LCD_DrawRectangle(cursor.x, cursor.x+CURSOR_WIDTH, TEXT_ARENA_Y_MIN + 2, TEXT_ARENA_Y_MIN + 2 + CURSOR_HEIGHT, COMPOSE_MESSAGE_BACKGROUND_COLOR);
-             cursor_color = COMPOSE_MESSAGE_BACKGROUND_COLOR;
-        }
-        G8RTOS_semaphore_signal(&semaphore_cursor);
-
-    }
-
-
-}
-
->>>>>>> 3f9467b3f08f30219977ce66ef2d32bc47e91ff1
-void thread_send_pong_data()
-{
-
-    int rand[10] = {0,1,2,3,4,5,6,7,8,9};//random variable
-    Intended_Data_t intended_data = PONG;
-    while(1)
-    {
-        G8RTOS_semaphore_wait(&semaphore_CC3100);
-        SendData((uint8_t*)&intended_data, HOST_IP_ADDR, sizeof(intended_data));
-        SendData((uint8_t*)&rand, HOST_IP_ADDR, sizeof(rand));
-        G8RTOS_semaphore_signal(&semaphore_CC3100);
-
-        G8RTOS_thread_sleep(300); //sleep for about a second
-
-    }
-
-}
-
-void thread_receive_pong_data()
-{
-    int rand[10];
-    G8RTOS_semaphore_wait(&semaphore_CC3100);
-
-    ReceiveData((uint8_t*)&rand, sizeof(rand));
-    G8RTOS_semaphore_signal(&semaphore_CC3100);
-
-    G8RTOS_kill_current_thread(); //kill thread
-
 }
 
 

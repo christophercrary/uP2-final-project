@@ -50,8 +50,8 @@
 
 // app indices for home_screen_applications section
 #define MUMESSAGE_APP_ICON_INDEX    0
-#define BALLSY_APP_ICON_INDEX       1
-#define PONG_APP_ICON_INDEX         2
+#define BALLSY_APP_ICON_INDEX       2
+#define PONG_APP_ICON_INDEX         4
 
 // fuck this
 #define MAX_NUMBER_OF_CONTACTS      3
