@@ -229,6 +229,7 @@
 typedef enum{
     //for mumessage app
     thread_mumessage_messagelog = 10,
+    CURSOR = 11
     //for ballsy app
 
 
@@ -242,7 +243,7 @@ typedef enum{
 }periodic_threads_to_kill_t;
 
 //corresponding array of TID's for the threads that need to die
-tid_t threads_to_kill[11]; //unfortunately need to hardcode this, will automatically be set to zeros
+tid_t threads_to_kill[12]; //unfortunately need to hardcode this, will automatically be set to zeros
 pid_t periodic_threads_to_kill[1];
 
 

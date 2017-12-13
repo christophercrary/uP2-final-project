@@ -906,6 +906,7 @@ static inline void insert_character(uint8_t character)
 {
     // IMPLEMENT: insert semaphore for cursor
     G8RTOS_semaphore_wait(&semaphore_cursor);
+    //G8RTOS_semaphore_wait(&semaphore_LCD);
 
     if (cursor.x < COMPOSE_MESSAGE_CURSOR_X_MAX)
     {
@@ -915,6 +916,8 @@ static inline void insert_character(uint8_t character)
 
         // the only way to successfully write back a character after deleting a character
         // fucking beats Brit and I (QUESTION)
+
+
         LCD_DrawRectangle(cursor.x, (cursor.x + LCD_TEXT_WIDTH + CURSOR_OFFSET), TEXT_ARENA_Y_MIN + 2,
                          (TEXT_ARENA_Y_MIN + 2 + LCD_TEXT_HEIGHT), LCD_WHITE);
 
@@ -946,6 +949,8 @@ static inline void insert_character(uint8_t character)
              LCD_PutChar(cursor.x+CURSOR_OFFSET, TEXT_ARENA_Y_MIN+2, character, LCD_TEXT_COLOR);
              cursor.x += LCD_TEXT_WIDTH + CURSOR_OFFSET;
     }
+  //  G8RTOS_semaphore_signal(&semaphore_LCD);
+
     G8RTOS_semaphore_signal(&semaphore_cursor);
 
     return;
@@ -969,10 +974,12 @@ static inline void insert_new_line(void)
         message_data.message[current_message_index++] = LF;
 
         message_data.header_info.size_of_data += 2;    // increment number of bytes to send
+     //   G8RTOS_semaphore_wait(&semaphore_LCD);
 
         // wipe current line of text arena
         LCD_DrawSection(section_text_arena,
                         (sizeof(section_text_arena)/sizeof(section_text_arena[0])));
+      //  G8RTOS_semaphore_signal(&semaphore_LCD);
 
         cursor.x = COMPOSE_MESSAGE_CURSOR_X_MIN;
         cursor.y += LCD_TEXT_HEIGHT;
@@ -1017,7 +1024,7 @@ static inline void delete_character()
                 message_data.header_info.size_of_data -= 2;    // decrement number of bytes to send by 2
 
             }
-            else        // current_message[current_message_index-1] = VT
+            else
             {
                 // remove soft new line
                 message_data.message[--current_message_index] = 0x00;
@@ -1100,10 +1107,6 @@ static inline void send_message(Board_Type_t board_type, Intended_Recipient_t co
         ip_address = client1.IP_address; //CURRENTLY ONLY FOR FIRST CLIENT IMPLEMENT OTHER CLIENT LATER
     }
 
-    //else if(contact == WES)
-    //{
-     //   ip_address = client2.IP_address;
-    //}
 
     // end message by appending ETX (end of text, 3)
     message_data.message[current_message_index] = 3;
@@ -1125,10 +1128,13 @@ static inline void send_message(Board_Type_t board_type, Intended_Recipient_t co
 
     // mark message as sent
     message_log[contact].message_history[message_log[contact].current_number_of_messages++].message_status = SENT;
+    G8RTOS_semaphore_wait(&semaphore_LCD);
 
     // wipe current line of text arena
     LCD_DrawSection(section_text_arena,
                     (sizeof(section_text_arena)/sizeof(section_text_arena[0])));
+    G8RTOS_semaphore_signal(&semaphore_LCD);
+
     //reset cursors
     G8RTOS_semaphore_wait(&semaphore_cursor);
 
@@ -1237,10 +1243,10 @@ static void print_messages_up(int *message_history_index)
 
         /* draw either sent or sent message, based on who message belongs to (IMPLEMENT) */
 
-        //if (messageStatus[*message_history_index] == RECEIVED)       // if message was received
           if(message_log[contact].message_history[*message_history_index].message_status == RECEIVED)
         {
             /* draw received message */
+              G8RTOS_semaphore_wait(&semaphore_LCD);
 
             // draw black border around message
             LCD_DrawRectangle(MESSAGE_LOG_MESSAGE_BOX_RECEIVED_X_MIN,
@@ -1255,6 +1261,7 @@ static void print_messages_up(int *message_history_index)
                               (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 2) - (num_of_rows * LCD_TEXT_HEIGHT)), yPos,
                               MESSAGE_LOG_MESSAGE_BOX_RECEIVED_COLOR);
 
+            G8RTOS_semaphore_signal(&semaphore_LCD);
 
             index = 0;      // reset temporary index
 
@@ -1285,8 +1292,12 @@ static void print_messages_up(int *message_history_index)
                     }
                     else
                     {
+                        G8RTOS_semaphore_wait(&semaphore_LCD);
+
                          LCD_PutChar(x, y, temp_char, MESSAGE_LOG_MESSAGE_TEXT_COLOR);       // place next character
                           x += LCD_TEXT_WIDTH;        // increment cursor position
+                          G8RTOS_semaphore_signal(&semaphore_LCD);
+
                     }
                 }
 
@@ -1297,6 +1308,8 @@ static void print_messages_up(int *message_history_index)
         {
 
             /* draw sent message box */
+
+            G8RTOS_semaphore_wait(&semaphore_LCD);
 
             // draw black border around message box
             LCD_DrawRectangle((MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX - ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 2) + MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET)),
@@ -1311,6 +1324,9 @@ static void print_messages_up(int *message_history_index)
                               (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 2) - (num_of_rows * LCD_TEXT_HEIGHT)),
                               yPos,
                               MESSAGE_LOG_MESSAGE_BOX_SENT_COLOR);
+
+            G8RTOS_semaphore_signal(&semaphore_LCD);
+
 
             index = 0;      // reset temporary index
 
@@ -1343,8 +1359,12 @@ static void print_messages_up(int *message_history_index)
                     }
                     else
                     {
+                        G8RTOS_semaphore_wait(&semaphore_LCD);
+
                         LCD_PutChar(x, y, temp_char, MESSAGE_LOG_MESSAGE_TEXT_COLOR);       // place next character
                         x += LCD_TEXT_WIDTH;        // increment cursor position
+                        G8RTOS_semaphore_signal(&semaphore_LCD);
+
                     }
                 }
             }while(temp_char != ETX);       // end of text encountered
@@ -1471,7 +1491,8 @@ static void print_messages_down(int *message_history_index, uint8_t total_number
     }
 
     /* increase message_history_index by that found number of messages to be printed (+1) */
-    (*message_history_index) = (*message_history_index) + number_of_printable_messages + 2;     // hacking into the mainframe
+    (*message_history_index) = (*message_history_index) + number_of_printable_messages + 2
+            ;     // hacking into the mainframe
 
     /* print messages from bottom of screen, up */
     print_messages_up(message_history_index);       // message_history_index is already a pointer to an int
@@ -1606,6 +1627,7 @@ void periodic_cursor_blink(void)
         LCD_DrawRectangle(cursor.x, cursor.x+CURSOR_WIDTH, TEXT_ARENA_Y_MIN + 2, TEXT_ARENA_Y_MIN + 2 + CURSOR_HEIGHT, COMPOSE_MESSAGE_BACKGROUND_COLOR);
          cursor_color = COMPOSE_MESSAGE_BACKGROUND_COLOR;
     }
+
 }
 
 /***************************** END OF PERIODIC THREADS *****************************/
@@ -1689,8 +1711,7 @@ void thread_mumessage_background_processes(void)
     // local string used to store entire unread message notification
     char unread_message_notification[4];
 
-//    // initialize unread_message_count_str with initial value
-//    sprintf(unread_message_notification, "%u", previous_unread_message_count);
+   // initialize unread_message_count_str with initial value
 
 
     // local Rectangle structure, used to wipe notifications
@@ -1716,6 +1737,7 @@ void thread_mumessage_background_processes(void)
      .string = unread_message_notification, .color = MUPHONE_HEADER_BAR_IMPORTANT_NOTIFICATION_TEXT_COLOR
     };
 
+    G8RTOS_semaphore_wait(&semaphore_LCD);
 
     // clear notification area
     LCD_DrawRectangleStructure(section_unread_message_notification_panel);
@@ -1730,6 +1752,7 @@ void thread_mumessage_background_processes(void)
 
     // print updated unread message notification
     LCD_PrintTextStructure(text_section_unread_message_notification);
+    G8RTOS_semaphore_signal(&semaphore_LCD);
 
     while(1)
     {
@@ -1741,43 +1764,19 @@ void thread_mumessage_background_processes(void)
             sprintf(unread_message_notification, "%u", previous_unread_message_count);
 
 
-            /* update MuPhone header bar with current amount of unread messages */
-
-//            // edge case for notification grammar
-//            if (previous_unread_message_count == 1)
-//            {
-//                // update unread_message_count_str with current value
-//                sprintf(unread_message_notification, "%u New Message", previous_unread_message_count);
-//            }
-//            else
-//            {
-//                // update unread_message_count_str with current value
-//                sprintf(unread_message_notification, "%u New Messages", previous_unread_message_count);
-//            }
-
-//            // check if update needs to be made to text color
-//            if ((previous_unread_message_count == 0) &&
-//                (text_section_unread_message_notification.color != MUPHONE_HEADER_BAR_NOTIFICATION_TEXT_COLOR))
-//            {
-//                text_section_unread_message_notification.color = MUPHONE_HEADER_BAR_NOTIFICATION_TEXT_COLOR;
-//            }
-
             // update local Text structure
             text_section_unread_message_notification.string = unread_message_notification;
 
+            G8RTOS_semaphore_wait(&semaphore_LCD);
 
             // clear notification area
             LCD_DrawRectangleStructure(section_unread_message_notification_panel);
 
-//            // draw message notification icon
-//            LCD_DrawExtraSmallImage(MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_ICON_X_MIN, MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_ICON_X_MAX + 20,
-//                                    MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_ICON_Y_MIN, MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_ICON_Y_MAX + 2, message_notification_icon_data);
 
+            G8RTOS_semaphore_signal(&semaphore_LCD);
 
             if ((previous_unread_message_count > 0))
             {
-                //text_section_unread_message_notification.color = MUPHONE_HEADER_BAR_IMPORTANT_NOTIFICATION_TEXT_COLOR;
-
                 // print updated unread message notification
                 LCD_PrintTextStructure(text_section_unread_message_notification);
             }
@@ -1790,230 +1789,6 @@ void thread_mumessage_background_processes(void)
 }
 
 /* threads for Compose Message */
-
-/************************************************************************************
-* Name: print_messages
-* Purpose: Helper function to print as many messages starting at and before
-*          the passed-in index of the global message history array
-* Input(s): IMPLEMENT: GLOBAL MESSAGE HISTORY PARAMETER, int *message_history_index
-* Output: N/A
-************************************************************************************/
-static void print_messages(int *message_history_index, uint8_t *number_of_messages_printed)
-{
-
-    Intended_Recipient_t contact;
-    if(phone.self_contact == CHRIS)
-    {
-        contact = BRIT;
-    }
-    else if(phone.self_contact == BRIT)
-    {
-        contact = CHRIS;
-    }
-    // reset counter for number of messages printed
-    (*number_of_messages_printed) = 0;
-
-    /* redraw text arena */
-    LCD_DrawSection(section_message_log_text_arena,
-                    (sizeof(section_message_log_text_arena)/sizeof(section_message_log_text_arena[0])));
-
-    // variable to determine where to start printing message (from the bottom of the message)
-    // initialize to bottom of screen
-    uint8_t yPos = MESSAGE_LOG_TEXT_ARENA_Y_MAX - MESSAGE_LOG_MESSAGE_BOX_EDGE_OFFSET;
-
-    /* print as many messages can fit on screen */
-    while (*message_history_index >= 0)
-    {
-        char temp_char = NULL;
-        uint16_t index = 0;
-        uint8_t num_of_rows = 1;        // number of lines of text
-        int max_row_length = -1;        // guarantee update at least once
-        uint8_t current_row_length = 0;
-
-        // traverse message to find longest line of characters (used to determine size of message)
-        do
-        {
-            // read character from message
-            //temp_char = message_array[*message_history_index][index++];
-            temp_char = message_log[contact].message_history[*message_history_index].old_message[index++];
-
-            if (temp_char != ETX)        // ignore end of text characters from message
-            {
-                if (temp_char == VT)      // soft new line encountered
-                {
-                    num_of_rows++;
-
-                    // check if current line has greatest length so far
-                    if (current_row_length > max_row_length)
-                    {
-                        max_row_length = current_row_length;
-                    }
-
-                    current_row_length = 0;     // reset current row length
-                }
-                else if (temp_char == CR)      // forced new line encountered
-                {
-                    index++;        // increment past LF
-                    num_of_rows++;
-
-                    // check if current line has greatest length so far
-                    if (current_row_length > max_row_length)
-                    {
-                        max_row_length = current_row_length;
-                    }
-
-                    current_row_length = 0;     // reset current row length
-                }
-                else
-                {
-                    current_row_length++;       // increase number of characters encountered
-                }
-            }
-        }while(temp_char != ETX);       // end of text encountered
-
-        // if message was only one line or if last line was greatest length
-        if ((max_row_length == -1) || (current_row_length > max_row_length))
-        {
-            max_row_length = current_row_length;
-        }
-
-        /* check if message can fit on screen */
-        if ( (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 2) - (num_of_rows * LCD_TEXT_HEIGHT) -
-            MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET - MESSAGE_LOG_MESSAGE_BOX_EDGE_OFFSET) < MESSAGE_LOG_TEXT_ARENA_Y_MIN )
-        {
-            break;      // message cannot fit, break for loop
-        }
-
-        /* draw either sent or sent message, based on who message belongs to (IMPLEMENT) */
-
- //       if (messageStatus[*message_history_index])       // if message was received
-        if(message_log[contact].message_history[*message_history_index].message_status)
-        {
-            /* draw received message */
-
-            // draw black border around message
-            LCD_DrawRectangle(MESSAGE_LOG_MESSAGE_BOX_RECEIVED_X_MIN,
-                              ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 2) + MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET),
-                              (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 2) - (num_of_rows * LCD_TEXT_HEIGHT) - MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET),
-                              (yPos + MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET),
-                              MESSAGE_LOG_MESSAGE_BOX_BORDER_COLOR);
-
-            // draw received rectangle based on size of longest length line in text message
-            LCD_DrawRectangle(MESSAGE_LOG_MESSAGE_BOX_RECEIVED_X_MIN,
-                              ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 2)),
-                              (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 2) - (num_of_rows * LCD_TEXT_HEIGHT)), yPos,
-                              MESSAGE_LOG_MESSAGE_BOX_RECEIVED_COLOR);
-
-
-            index = 0;      // reset temporary index
-
-            // IMPLEMENT depending on whether or not received or received
-
-            // initialize a cursor at beginning of received message box
-            uint8_t x = MESSAGE_LOG_MESSAGE_RECEIVED_TEXT_X_MIN;      // used to print within message box
-            uint8_t y = (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 1) - (num_of_rows * LCD_TEXT_HEIGHT));
-
-            /* print message within received box */
-            do
-            {
-                // read character from message
-               // temp_char = message_array[*message_history_index][index++];
-                  temp_char = message_log[contact].message_history[*message_history_index].old_message[index++];
-
-
-                if (temp_char != ETX)        // ignore end of text characters from message
-                {
-                    if (temp_char == VT)    // soft new line encountered
-                    {
-                        x = MESSAGE_LOG_MESSAGE_RECEIVED_TEXT_X_MIN;        // set cursor to beginning of next line
-                        y += LCD_TEXT_HEIGHT;
-                    }
-                    else if (temp_char == CR)     // forced new line encountered
-                    {
-                        index++;        // increment past LF
-
-                        x = MESSAGE_LOG_MESSAGE_RECEIVED_TEXT_X_MIN;        // set cursor to beginning of next line
-                        y += LCD_TEXT_HEIGHT;
-                    }
-                    else
-                    {
-                        LCD_PutChar(x, y, temp_char, MESSAGE_LOG_MESSAGE_TEXT_COLOR);       // place next character
-                        x += LCD_TEXT_WIDTH;        // increment cursor position
-                    }
-                }
-
-            }while(temp_char != ETX);       // end of text encountered
-
-        }
-        else        // if message was sent
-        {
-
-            /* draw sent message box */
-
-            // draw black border around message box
-            LCD_DrawRectangle((MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX - ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 2) + MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET)),
-                              MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX,
-                              (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 2) - (num_of_rows * LCD_TEXT_HEIGHT) - MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET),
-                              (yPos + MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET),
-                              MESSAGE_LOG_MESSAGE_BOX_BORDER_COLOR);
-
-            // draw sent rectangle based on size of longest length line in text message
-            LCD_DrawRectangle((MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX - ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 2))),
-                              MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX,
-                              (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 2) - (num_of_rows * LCD_TEXT_HEIGHT)),
-                              yPos,
-                              MESSAGE_LOG_MESSAGE_BOX_SENT_COLOR);
-
-            index = 0;      // reset temporary index
-
-            // IMPLEMENT depending on whether or not sent or sent
-
-            // initialize a cursor at beginning of sent message box
-            uint16_t x = (MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX - ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 1)));      // used to print within message box
-            uint8_t y = (yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 1) - (num_of_rows * LCD_TEXT_HEIGHT));
-
-            /* print message within sent box */
-            do
-            {
-                // read character from message
-               // temp_char = message_array[*message_history_index][index++];
-                temp_char = message_log[contact].message_history[*message_history_index].old_message[index++];
-
-                if (temp_char != ETX)        // ignore end of text characters from message
-                {
-                    if (temp_char == VT)    // soft new line encountered
-                    {
-                        x = (MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX - ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 1)));        // set cursor to beginning of next line
-                        y += LCD_TEXT_HEIGHT;
-                    }
-                    else if (temp_char == CR)      // new line encountered
-                    {
-                        index++;        // increment past LF
-
-                        x = (MESSAGE_LOG_MESSAGE_BOX_SENT_X_MAX - ((max_row_length * LCD_TEXT_WIDTH) + (MESSAGE_LOG_MESSAGE_TEXT_X_OFFSET * 1)));        // set cursor to beginning of next line
-                        y += LCD_TEXT_HEIGHT;
-                    }
-                    else
-                    {
-                        LCD_PutChar(x, y, temp_char, MESSAGE_LOG_MESSAGE_TEXT_COLOR);       // place next character
-                        x += LCD_TEXT_WIDTH;        // increment cursor position
-                    }
-                }
-            }while(temp_char != ETX);       // end of text encountered
-        }
-
-        // update yPos to be at top of last printed message (bottom of next printable area)
-        yPos = ((yPos - (MESSAGE_LOG_MESSAGE_TEXT_Y_OFFSET * 2) - (num_of_rows * LCD_TEXT_HEIGHT) - MESSAGE_LOG_MESSAGE_BOX_BORDER_OFFSET) - MESSAGE_LOG_MESSAGE_BOX_Y_OFFSET);
-
-        // retrieve previous message on the next iteration
-        (*message_history_index) = (*message_history_index) - 1;
-
-        // increment the counter of the amount of messages printed
-        (*number_of_messages_printed) = (*number_of_messages_printed) + 1;
-    }
-
-    return;
-}
 
 
 /************************************************************************************
@@ -2028,6 +1803,7 @@ void thread_mumessage_message_log(void)
     threads_to_kill[thread_mumessage_messagelog] = G8RTOS_get_tid();
 
     phone.current_app = MUMESSAGE_LOG;
+    G8RTOS_semaphore_wait(&semaphore_LCD);
 
     // draw necessary screen visuals
     LCD_DrawSection(section_message_log_background,
@@ -2041,6 +1817,7 @@ void thread_mumessage_message_log(void)
 
     LCD_PrintTextSection(text_section_message_log_header,
                          (sizeof(text_section_message_log_header)/sizeof(text_section_message_log_header[0])));
+    G8RTOS_semaphore_signal(&semaphore_LCD);
 
     // re-enable P4 interrupt
     GPIO_enableInterrupt(GPIO_PORT_P4, GPIO_PIN0);
@@ -2101,10 +1878,6 @@ void thread_mumessage_message_log(void)
 
         G8RTOS_thread_sleep(HALF_SECOND_MS);
     }
-
-
-    // IMPLEMENT: GETTING KILLED BY HITTING BACK BUTTON
-
 }
 
 /************************************************************************************
@@ -2147,7 +1920,11 @@ void thread_mumessage_message_log_check_TP(void)
 
         /* kill Message Log (IMPLEMENT) */
         kill_mumessage_threads();
+        G8RTOS_semaphore_wait(&semaphore_LCD);
+
         LCD_DrawRectangle(cursor.x, (cursor.x + CURSOR_OFFSET), cursor.y, (cursor.y + CURSOR_HEIGHT), COMPOSE_MESSAGE_TEXT_ARENA_COLOR);
+        G8RTOS_semaphore_signal(&semaphore_LCD);
+
         /* return to MuMessage main screen */
         G8RTOS_add_thread(thread_mumessage_open_app, 180, "MM: open app");
 
@@ -2184,6 +1961,7 @@ void thread_mumessage_compose_message(void)
     keyboard = 0;
 
     /* draw Compose Message screen visuals */
+    G8RTOS_semaphore_wait(&semaphore_LCD);
 
     LCD_DrawSection(section_compose_message_background,
                     (sizeof(section_compose_message_background)/sizeof(section_compose_message_background[0])));
@@ -2209,6 +1987,8 @@ void thread_mumessage_compose_message(void)
     LCD_PrintTextSection(text_section_keyboard1_no_click,
                            (sizeof(text_section_keyboard1_no_click)/sizeof(text_section_keyboard1_no_click[0])));
 
+    G8RTOS_semaphore_signal(&semaphore_LCD);
+
     message_data.header_info.intended_app = MUMESSAGE;
     message_data.header_info.size_of_data = 0;
 
@@ -2221,8 +2001,8 @@ void thread_mumessage_compose_message(void)
     G8RTOS_add_aperiodic_thread(aperiodic_mumessage_compose_message, PORT4_IRQn, 6);
 
     /* add periodic thread for cursor blinking */
-    G8RTOS_add_pet(periodic_cursor_blink, FOUR_TENTHS_SECOND_MS, 0, "cursor blink");
-
+   //G8RTOS_add_pet(periodic_cursor_blink, FOUR_TENTHS_SECOND_MS, 0, "cursor blink");
+    G8RTOS_add_thread(thread_blink_cursor, 40, "cursor blink");
     G8RTOS_kill_current_thread();
 
 }
@@ -2251,21 +2031,21 @@ void thread_mumessage_compose_message_check_TP(void)
     // index used to check for interaction between specific sections of screen
     int index = -1;
 
-
     // check if touch interacted with 'Send' button
     index = TP_CheckForSectionPress( touch, section_compose_message_header_buttons,
                                      (sizeof(section_compose_message_header_buttons)/sizeof(section_compose_message_header_buttons[0])));
 
-
     // check if touch interacted with back button (IMPLEMENT)
     if (index == BACK_BUTTON_INDEX)
     {
-        /* kill Compose Message (IMPLEMENT) */
-        /* kill Message Log (IMPLEMENT) */
-
         G8RTOS_disable_aperiodic_thread(PORT4_IRQn); //disbale aperiodic thread to not write the screen again
         kill_mumessage_threads();
+
+        G8RTOS_semaphore_wait(&semaphore_LCD);
+
         LCD_DrawRectangle(cursor.x, (cursor.x + CURSOR_OFFSET), cursor.y, (cursor.y + CURSOR_HEIGHT), COMPOSE_MESSAGE_TEXT_ARENA_COLOR);
+        G8RTOS_semaphore_signal(&semaphore_LCD);
+
         /* return to MuMessage main screen */
         G8RTOS_add_thread(thread_mumessage_open_app, 180, "MM: open app");
         G8RTOS_kill_current_thread();
@@ -2300,6 +2080,8 @@ void thread_mumessage_compose_message_check_TP(void)
         kill_compose_message = false;
     }
     // check if touch interacted with keyboard currently displayed
+    G8RTOS_semaphore_wait(&semaphore_LCD);
+
     switch (keyboard)
     {
         case 0:     // check for interaction on keyboard #1 (lower-case keyboard)
@@ -2741,6 +2523,7 @@ void thread_mumessage_compose_message_check_TP(void)
 
 
     }
+    G8RTOS_semaphore_signal(&semaphore_LCD);
 
     // re-enable LCD Touch Panel interrupt and clear interrupt flag
     GPIO_enableInterrupt(GPIO_PORT_P4, GPIO_PIN0);
@@ -2749,8 +2532,6 @@ void thread_mumessage_compose_message_check_TP(void)
     // kill thread (rip)
     G8RTOS_kill_current_thread();
 }
-
-// TRY MAKING STATIC
 /************************************************************************************
 * Name: thread_mumessage_open_app
 * Purpose: Thread to open already initialized MuMessage application instance
@@ -2759,6 +2540,8 @@ void thread_mumessage_compose_message_check_TP(void)
 ************************************************************************************/
 void thread_mumessage_open_app(void)
 {
+    G8RTOS_semaphore_wait(&semaphore_LCD);
+
     /* draw main screen */
     LCD_DrawSection(section_mumessage_main_screen,
                         (sizeof(section_mumessage_main_screen)/sizeof(section_mumessage_main_screen[0])));
@@ -2769,6 +2552,7 @@ void thread_mumessage_open_app(void)
     LCD_PrintTextSection(text_section_mumessage_main_screen,
                          (sizeof(text_section_mumessage_main_screen)/sizeof(text_section_mumessage_main_screen[0])));
 
+    G8RTOS_semaphore_signal(&semaphore_LCD);
 
     // re-enable P4 interrupts to allow touches to be made to LCD TP
     GPIO_enableInterrupt(GPIO_PORT_P4, GPIO_PIN0);
@@ -2792,7 +2576,6 @@ void thread_mumessage_open_app(void)
     G8RTOS_semaphore_init(&semaphore_cursor,1);
 
     phone.current_app = MUMESSAGE;
-    // cya dood
     G8RTOS_kill_current_thread();
 }
 
@@ -2805,41 +2588,6 @@ void thread_mumessage_open_app(void)
 ************************************************************************************/
 void thread_mumessage_start_app(void)
 {
-
-    if (!applicationInitialized)
-    {
-        //    // initialize application instance
-        //
-        //    message_data.header_info.intended_app = MUMESSAGE;
-        //    message_data.header_info.size_of_data = 0; //initialize size to send to zero
-        //    phone.message_received = 0;
-        //
-        //    if(phone.self_contact == BRIT)
-        //    {
-        //        message_data.to_and_from.contact = CHRIS; //talk to chris for now
-        //        message_data.to_and_from.contact_of_sender = BRIT;
-        //    }
-        //    else if(phone.self_contact == CHRIS)
-        //    {
-        //        message_data.to_and_from.contact = BRIT; //talk to host
-        //        message_data.to_and_from.contact_of_sender = CHRIS;
-        //    }
-        //    else if(phone.self_contact == WES)
-        //    {
-        //        message_data.to_and_from.contact = BRIT; //talk to host
-        //        message_data.to_and_from.contact_of_sender = WES;
-        //    }
-        //
-        //
-        //    // initialize each contact's current number of messages
-        //    for (uint8_t i = 0; i < MAX_NUMBER_OF_CONTACTS; i++)
-        //    {
-        //        message_log[i].current_number_of_messages = 0;
-        //    }
-
-            // message data should already be initialized to zero
-    }
-
     /* start main screen of MuMessage */
 
     G8RTOS_add_thread(thread_mumessage_open_app, 180, "MM: open app");
@@ -2888,7 +2636,34 @@ void thread_receive_message_data()
     G8RTOS_kill_current_thread(); //kill thread
 }
 
+void thread_blink_cursor()
+{
+    threads_to_kill[CURSOR] = G8RTOS_get_tid();
 
+    while(1)
+    {
+        G8RTOS_semaphore_wait(&semaphore_LCD);
+        G8RTOS_semaphore_wait(&semaphore_cursor);
+
+        if(cursor_color == COMPOSE_MESSAGE_BACKGROUND_COLOR)
+        {
+            LCD_DrawRectangle(cursor.x, cursor.x+CURSOR_WIDTH, TEXT_ARENA_Y_MIN + 2, TEXT_ARENA_Y_MIN + 2 + CURSOR_HEIGHT, CURSOR_COLOR);
+            cursor_color = CURSOR_COLOR;
+        }
+        else
+        {
+            LCD_DrawRectangle(cursor.x, cursor.x+CURSOR_WIDTH, TEXT_ARENA_Y_MIN + 2, TEXT_ARENA_Y_MIN + 2 + CURSOR_HEIGHT, COMPOSE_MESSAGE_BACKGROUND_COLOR);
+             cursor_color = COMPOSE_MESSAGE_BACKGROUND_COLOR;
+        }
+        G8RTOS_semaphore_signal(&semaphore_cursor);
+        G8RTOS_semaphore_signal(&semaphore_LCD);
+
+        G8RTOS_thread_sleep(750);
+
+    }
+
+
+}
 /**************************** END OF COMMON THREADS ********************************/
 
 

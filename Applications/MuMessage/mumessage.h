@@ -1421,6 +1421,8 @@
 
 //message data
 
+semaphore_t semaphore_LCD;
+
 typedef Intended_Recipient_t Self_Contact_t;
 
 typedef struct

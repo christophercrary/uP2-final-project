@@ -960,12 +960,15 @@ const static Text text_section_muphone_home_screen_applications[] =
 ************************************************************************************/
 static inline void demo_init(void)
 {
+
+    G8RTOS_semaphore_wait(&semaphore_LCD);
     /* draw MuPhone demo screen */
     LCD_DrawSection(section_muphone_demo_screen,
                         (sizeof(section_muphone_demo_screen)/sizeof(section_muphone_demo_screen[0])));
 
     LCD_PrintTextSection(text_section_muphone_demo_screen,
                          (sizeof(text_section_muphone_demo_screen)/sizeof(text_section_muphone_demo_screen[0])));
+    G8RTOS_semaphore_signal(&semaphore_LCD);
 
     /* add aperiodic thread to detect touches made to the demo screen */
     G8RTOS_add_aperiodic_thread(aperiodic_muphone_demo_screen, PORT4_IRQn, 6);
@@ -987,6 +990,7 @@ static inline void muphone_init(void)
 
     //add wifi connectivity
 
+    G8RTOS_semaphore_init(&semaphore_LCD,1);
     /* launch final demo screen */
     demo_init();
 
@@ -1014,10 +1018,10 @@ static inline void muphone_init(void)
          G8RTOS_kill_thread(threads_to_kill[thread_mumessage_messagelog]);
          threads_to_kill[thread_mumessage_messagelog]=0;
      }
-     if(periodic_threads_to_kill[thread_blink_cursor_enum] != 0)
+     if(threads_to_kill[CURSOR] != 0)
      {
-         G8RTOS_kill_pet((periodic_threads_to_kill[thread_blink_cursor_enum]));
-         periodic_threads_to_kill[thread_blink_cursor_enum]=0;
+         G8RTOS_kill_thread((threads_to_kill[CURSOR]));
+         threads_to_kill[CURSOR] = 0;
      }
 }
 
@@ -1217,9 +1221,7 @@ void thread_muphone_home_button_check(void)
     if ( !(P4->IN & PIN_HOME_BUTTON) )
     {
         // ISR was properly called
-
         // kill current application and display home screen
-        // IMPLEMENT: KILL CURRENT APP
 
         kill_ballsy_threads();
         kill_mumessage_threads(); //kill them all
@@ -1280,12 +1282,6 @@ void thread_muphone_home_screen_check_TP(void)
         else if (index == BALLSY_APP_ICON_INDEX)
         {
             G8RTOS_add_thread(thread_ball_program_init, 50, "ballsy - start app");
-
-            // IMPLEMENT: MAKE SURE TO KILL APERIODIC THREAD UPON GOING TO HOME SCREEN
-        }
-        else if (index == PONG_APP_ICON_INDEX)
-        {
-            //IMPLEMENT: PONG M8YYY
         }
     }
     else        // otherwise, allow future touches to be made to LCD TP
@@ -1333,6 +1329,7 @@ void thread_muphone_home_screen(void)
     // set current app
     phone.current_app = HOME_SCREEN;
 
+    G8RTOS_semaphore_wait(&semaphore_LCD);
     /* draw MuPhone home screen */
     LCD_DrawSection(section_muphone_home_screen,
                     (sizeof(section_muphone_home_screen)/sizeof(section_muphone_home_screen[0])));
@@ -1367,6 +1364,8 @@ void thread_muphone_home_screen(void)
     LCD_PrintTextSection(text_section_muphone_home_screen_applications,
                          (sizeof(text_section_muphone_home_screen_applications)/sizeof(text_section_muphone_home_screen_applications[0])));
 
+
+    G8RTOS_semaphore_signal(&semaphore_LCD);
     // re-enable P4 interrupts to allow touches to be made to LCD TP
     GPIO_enableInterrupt(GPIO_PORT_P4, GPIO_PIN0);
 
@@ -1386,6 +1385,8 @@ void thread_muphone_home_screen(void)
 ************************************************************************************/
 void thread_muphone_start_phone(void)
 {
+    G8RTOS_semaphore_wait(&semaphore_LCD);
+
     /* draw MuPhone header bar */
     LCD_DrawSection(section_muphone_header_bar,
                     (sizeof(section_muphone_header_bar)/sizeof(section_muphone_header_bar[0])));
@@ -1416,6 +1417,9 @@ void thread_muphone_start_phone(void)
         // print name in header bar
         LCD_PrintTextStructure(text_section_header_name);
     }
+
+    G8RTOS_semaphore_signal(&semaphore_LCD);
+
 
     /* enable "home screen button" (bottom daughter board button) */
     GPIO_enableInterrupt(GPIO_PORT_P5, GPIO_PIN4);

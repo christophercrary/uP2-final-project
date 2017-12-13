@@ -19,26 +19,12 @@ void thread_init_host_wifi()
 {
     initCC3100(Host); //initialize CC3100 as the host
 
-    //establish connection with client1
-     // establish connection with client1,
-
-
     //CLIENT1 NEEDS TO BE CHRIS
      while(ReceiveData((uint8_t*)&client1, sizeof(client1)) < 0);
 
      client1.hasAcknowledged = true;
      SendData((uint8_t*)&client1.hasAcknowledged, client1.IP_address, sizeof(client1.hasAcknowledged));
 
- /*
-     //establish connection with client2
-
-     //CLIENT2 NEEDS TO BE WES
-     while(ReceiveData((uint8_t*)&client2, sizeof(client2)) < 0);
-
-     client2.hasAcknowledged = true;
-     SendData((uint8_t*)&client2.hasAcknowledged, client2.IP_address, sizeof(client2.hasAcknowledged));
-
-*/
      // light up led to show WiFi connection
      P2->DIR |= (BIT0); //make p2.0 an output
      P2->OUT |= (BIT0);
