@@ -210,7 +210,7 @@
 //NEED TO REINITIALIZE SEMAPHORES FOR THE THREADS THAT DIE
 typedef enum{
     //for mumessage app
-    thread_mumessage_message_log = 10,
+    thread_mumessage_messagelog = 10,
     //for ballsy app
 
 
@@ -219,7 +219,7 @@ typedef enum{
 
 typedef enum{
 
-    thread_blink_cursor = 0,
+    thread_blink_cursor_enum = 0,
 
 }periodic_threads_to_kill_t;
 

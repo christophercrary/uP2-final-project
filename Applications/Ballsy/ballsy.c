@@ -103,6 +103,7 @@ static inline ball_t* add_ball(void)
         ball_tail->next = &balls[0];
         ball_head->prev = &balls[0];
         ball_tail->prev = &balls[0];
+        threads_to_kill[0] = G8RTOS_get_tid();
     }
     else    // if other elements exist in ball list
     {
@@ -1017,6 +1018,7 @@ void thread_ball(void)
  ************************************************************************************/
 void thread_ball_program_init(void)
 {
+    phone.current_app = BALLS;
     // initialize ball program semaphores
     G8RTOS_semaphore_init(&semaphore_ball_list, 1);
     G8RTOS_semaphore_init(&semaphore_coordinates, 1);

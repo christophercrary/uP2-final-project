@@ -861,6 +861,8 @@ static Message_Log_t message_log[MAX_NUMBER_OF_CONTACTS];
 //bool back_button_pressed = false;
 uint16_t cursor_color;
 
+bool message_received_in_log = false; //for updating the messaage log in real time
+
 //////////////////////////END OF PRIVATE DATA MEMBERS////////////////////////////////
 
 /////////////////////////////////PRIVATE FUNCTIONS///////////////////////////////////
@@ -1108,12 +1110,14 @@ static inline void send_message(Board_Type_t board_type, Intended_Recipient_t co
     cursor.y = COMPOSE_MESSAGE_CURSOR_Y_MIN;
     G8RTOS_semaphore_signal(&semaphore_cursor);
 
+
     message_data.header_info.size_of_data = 0;
-    for(uint16_t i = current_message_index; i>=0; i--)
+    for(int16_t i = current_message_index; i >= 0 ; i--)
     {
         message_data.message[i]=0; //reset array
     }
 
+    current_message_index=0;
 
 }
 
@@ -1564,6 +1568,8 @@ void aperiodic_mumessage_message_log(void)
 ************************************************************************************/
 void periodic_cursor_blink(void)
 {
+    periodic_threads_to_kill[0] = G8RTOS_get_pid();
+
     if(cursor_color == COMPOSE_MESSAGE_BACKGROUND_COLOR)
     {
         LCD_DrawRectangle(cursor.x, cursor.x+CURSOR_WIDTH, TEXT_ARENA_Y_MIN + 2, TEXT_ARENA_Y_MIN + 2 + CURSOR_HEIGHT, CURSOR_COLOR);
@@ -1968,8 +1974,9 @@ static void print_messages(int *message_history_index, uint8_t *number_of_messag
 void thread_mumessage_message_log(void)
 {
 
-    threads_to_kill[thread_mumessage_message_log] = G8RTOS_get_tid();
+    threads_to_kill[thread_mumessage_messagelog] = G8RTOS_get_tid();
 
+    phone.current_app = MUMESSAGE_LOG;
 
     // draw necessary screen visuals
     LCD_DrawSection(section_message_log_background,
@@ -2029,6 +2036,17 @@ void thread_mumessage_message_log(void)
             print_messages_up(&temp_index);
         }
 
+        if(message_received_in_log)
+        {
+
+            message_history_index = message_log[contact].current_number_of_messages-1;
+
+            /* print initial screen of message log (most current messages) */
+            print_messages_up(&message_history_index);
+            temp_index = message_history_index;     // used to prevent unnecessary printing of messages
+
+            message_received_in_log = false; //reset boolean
+        }
 
         G8RTOS_thread_sleep(HALF_SECOND_MS);
     }
@@ -2074,8 +2092,10 @@ void thread_mumessage_message_log_check_TP(void)
         //IMPLEMENT
         // make sure to disable interrupts (?)
 
-        /* kill Message Log (IMPLEMENT) */
+        G8RTOS_disable_aperiodic_thread(PORT4_IRQn); //disbale aperiodic thread to not write the screen again
 
+        /* kill Message Log (IMPLEMENT) */
+        kill_mumessage_threads();
         /* return to MuMessage main screen */
         G8RTOS_add_thread(thread_mumessage_open_app, 180, "MM: open app");
 
@@ -2105,6 +2125,8 @@ void thread_mumessage_compose_message(void)
     // initialize the global cursor to the beginning of the text arena
     cursor.x = COMPOSE_MESSAGE_CURSOR_X_MIN;
     cursor.y = COMPOSE_MESSAGE_CURSOR_Y_MIN;
+
+    phone.current_app = MUMESSAGE_LOG;
 
     // initialize keyboard to keyboard #1 (keyboard = 0)
     keyboard = 0;
@@ -2188,15 +2210,8 @@ void thread_mumessage_compose_message_check_TP(void)
     {
         /* kill Compose Message (IMPLEMENT) */
         /* kill Message Log (IMPLEMENT) */
-
-<<<<<<< HEAD
-        //back_button_pressed=true;
-        //while(back_button_pressed); //wait for thread to die muahaha
-=======
-       // back_button_pressed=true;
-      //  while(back_button_pressed); //wait for thread to die muahaha
->>>>>>> 7156c47a811dcd0a4b710760ccb2e3baf57d6364
-
+        G8RTOS_disable_aperiodic_thread(PORT4_IRQn); //disbale aperiodic thread to not write the screen again
+        kill_mumessage_threads();
         /* return to MuMessage main screen */
         G8RTOS_add_thread(thread_mumessage_open_app, 180, "MM: open app");
         G8RTOS_kill_current_thread();
@@ -2950,6 +2965,7 @@ void thread_mumessage_open_app(void)
     }
     G8RTOS_semaphore_init(&semaphore_cursor,1);
 
+    phone.current_app = MUMESSAGE;
     // cya dood
     G8RTOS_kill_current_thread();
 }
@@ -3037,25 +3053,29 @@ void thread_receive_message_data()
 
     unread_message_count++;     // TESTING new message notification, need to reset if click on message log
 
+    if(phone.current_app == MUMESSAGE_LOG)
+    {
+        message_received_in_log = true;
+        unread_message_count--;
+    }
+
 
     G8RTOS_kill_current_thread(); //kill thread
 }
 
 
-<<<<<<< HEAD
-=======
-
 void thread_blink_cursor()
 {
+
 
     while(1)
     {
 
-        if(back_button_pressed)
-        {
-            back_button_pressed = false;
-            G8RTOS_kill_current_thread();
-        }
+      //  if(back_button_pressed)
+       // {
+        //    back_button_pressed = false;
+        //    G8RTOS_kill_current_thread();
+        //}
         G8RTOS_semaphore_wait(&semaphore_cursor);
 
         if(cursor_color == COMPOSE_MESSAGE_BACKGROUND_COLOR)
@@ -3070,14 +3090,11 @@ void thread_blink_cursor()
         }
         G8RTOS_semaphore_signal(&semaphore_cursor);
 
-        G8RTOS_thread_sleep(750);
-
     }
 
 
 }
 
->>>>>>> 7156c47a811dcd0a4b710760ccb2e3baf57d6364
 void thread_send_pong_data()
 {
 

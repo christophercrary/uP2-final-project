@@ -114,6 +114,8 @@ G8RTOS_response_code_t G8RTOS_add_thread(void (*thread_function)(void),
 ************************************************************************************/
 tid_t G8RTOS_get_tid(void);
 
+pid_t G8RTOS_get_pid();
+
 /************************************************************************************
 * Name: G8RTOS_init
 * Purpose: Initializes necessary variables and hardware for G8RTOS.
