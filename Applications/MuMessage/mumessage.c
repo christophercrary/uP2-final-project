@@ -793,6 +793,9 @@ static uint16_t current_message_index = 0;
 // current message being composed
 static Message_Data_t message_data;
 
+static bool kill_compose_message = false;
+
+
 /************************* END OF COMPOSE MESSAGE MEMBERS **************************/
 
 /***************************** MESSAGE LOG MEMBERS *********************************/
@@ -1095,6 +1098,7 @@ static inline void send_message(Board_Type_t board_type, Intended_Recipient_t co
 
     // end message by appending ETX (end of text, 3)
     message_data.message[current_message_index] = 3;
+    current_message_index++;
     message_data.header_info.size_of_data++;
     G8RTOS_semaphore_wait(&semaphore_CC3100);
 
@@ -1111,51 +1115,22 @@ static inline void send_message(Board_Type_t board_type, Intended_Recipient_t co
     }
 
     // mark message as sent
-    message_log[contact].message_history[message_log[contact].current_number_of_messages].message_status = SENT;
+    message_log[contact].message_history[message_log[contact].current_number_of_messages++].message_status = SENT;
+
+    // wipe current line of text arena
+    LCD_DrawSection(section_text_arena,
+                    (sizeof(section_text_arena)/sizeof(section_text_arena[0])));
+    //reset cursors
+    cursor.x = COMPOSE_MESSAGE_CURSOR_X_MIN;
+    cursor.y = COMPOSE_MESSAGE_CURSOR_Y_MIN;
+
+    while(current_message_index != 0)
+    {
+        message_data.message[current_message_index--]=0; //reset array
+    }
+
+
 }
-
-/************************************************************************************
-* Name: Pass_Message_Along
-* Purpose: Helper function to send message to client when a client is trying to communicate with another client
-* Input(s): Board_Type_t that defines who the message is meant to be sent to, contact is who the baord is trying to communicate with,
-*           buffer is the data to be sent, and buffer_size is the size of the buffer
-* Output: N/A
-* NOTE: This inline functions waits and signals semaphore_CC3100
-************************************************************************************/
-static inline void Pass_Message_Along(Board_Type_t board_type, Intended_Recipient_t contact, char buffer[] , uint32_t buffer_size)
-{
-    uint32_t ip_address;
-    if(contact == BRIT)
-    {
-        //BRIT WILL ALWAYS BE HOST
-        //send message to host from client
-         ip_address = HOST_IP_ADDR;
-    }
-
-    else if(contact == CHRIS)
-    {
-        //sending data from host to client
-        ip_address = client1.IP_address; //CURRENTLY ONLY FOR FIRST CLIENT IMPLEMENT OTHER CLIENT LATER
-    }
-    else if(contact == WES)
-    {
-        ip_address = client2.IP_address;
-    }
-
-    // end message by appending ETX (end of text, 3)
-    message_data.message[current_message_index] = 3;
-
-    G8RTOS_semaphore_wait(&semaphore_CC3100);
-
-    SendData((uint8_t*)&message_data.header_info, ip_address, sizeof(message_data.header_info)); //send header info
-    SendData((uint8_t*)&message_data.to_and_from, ip_address, sizeof(message_data.to_and_from)); //send contact information (who I am trying to communicate with and who I am)
-    SendData((uint8_t*)&buffer, ip_address, buffer_size); //send actual message
-
-    G8RTOS_semaphore_signal(&semaphore_CC3100);
-
-    //DO NOT LOG THIS MESSAGE, WAS NOT MEANT FOR THE HOST TO RECEIVE
-}
-
 
 /************************************************************************************
 * Name: print_messages_up
@@ -1174,6 +1149,15 @@ static void print_messages_up(int *message_history_index)
     // initialize to bottom of screen
     uint8_t yPos = MESSAGE_LOG_TEXT_ARENA_Y_MAX - MESSAGE_LOG_MESSAGE_BOX_EDGE_OFFSET;
 
+    Intended_Recipient_t contact;
+    if(phone.self_contact == BRIT)
+    {
+        contact = CHRIS;
+    }
+    else if(phone.self_contact == CHRIS)
+    {
+        contact = BRIT;
+    }
     /* print as many messages can fit on screen */
     while (*message_history_index >= 0)
     {
@@ -1187,8 +1171,8 @@ static void print_messages_up(int *message_history_index)
         do
         {
             // read character from message
-            temp_char = message_array[*message_history_index][index++];
-
+            //temp_char = message_array[*message_history_index][index++];
+            temp_char = message_log[contact].message_history[*message_history_index].old_message[index++];
             if (temp_char != ETX)        // ignore end of text characters from message
             {
                 if (temp_char == VT)      // soft new line encountered
@@ -1238,7 +1222,8 @@ static void print_messages_up(int *message_history_index)
 
         /* draw either sent or sent message, based on who message belongs to (IMPLEMENT) */
 
-        if (messageStatus[*message_history_index])       // if message was received
+        //if (messageStatus[*message_history_index] == RECEIVED)       // if message was received
+          if(message_log[contact].message_history[*message_history_index].message_status == RECEIVED)
         {
             /* draw received message */
 
@@ -1266,7 +1251,8 @@ static void print_messages_up(int *message_history_index)
             do
             {
                 // read character from message
-                temp_char = message_array[*message_history_index][index++];
+              //  temp_char = message_array[*message_history_index][index++];
+                temp_char = message_log[contact].message_history[*message_history_index].old_message[index++];
 
                 if (temp_char != ETX)        // ignore end of text characters from message
                 {
@@ -1323,7 +1309,8 @@ static void print_messages_up(int *message_history_index)
             do
             {
                 // read character from message
-                temp_char = message_array[*message_history_index][index++];
+               // temp_char = message_array[*message_history_index][index++];
+                temp_char = message_log[contact].message_history[*message_history_index].old_message[index++];
 
                 if (temp_char != ETX)        // ignore end of text characters from message
                 {
@@ -1382,6 +1369,17 @@ static void print_messages_down(int *message_history_index, uint8_t total_number
 
     uint8_t yPos = MESSAGE_LOG_TEXT_ARENA_Y_MIN;
 
+
+    Intended_Recipient_t contact;
+    if(phone.self_contact == BRIT)
+    {
+        contact = CHRIS;
+    }
+    else if(phone.self_contact == CHRIS)
+    {
+        contact = BRIT;
+    }
+
     // count how many messages can be printed top, down (same number as how many can be printed bottom, up)
     // guarantee no out-of-range indexing for message log
     while (temp2_index < total_number_of_messages - 1)
@@ -1396,7 +1394,8 @@ static void print_messages_down(int *message_history_index, uint8_t total_number
         do
         {
             // read character from message
-            temp_char = message_array[temp2_index][index++];
+            //temp_char = message_array[temp2_index][index++];
+            temp_char = message_log[contact].message_history[temp2_index].old_message[index++];
 
             if (temp_char != ETX)        // ignore end of text characters from message
             {
@@ -1975,10 +1974,20 @@ void thread_mumessage_message_log(void)
     // re-enable P4 interrupt
     GPIO_enableInterrupt(GPIO_PORT_P4, GPIO_PIN0);
 
+    Intended_Recipient_t contact;
+    if(phone.board_type == BRIT)
+    {
+        contact = CHRIS;
+    }
+    else if(phone.board_type == CHRIS)
+    {
+        contact = BRIT;
+    }
+
     /* add the necessary aperiodic thread for touches made to the LCD TouchPanel */
     G8RTOS_add_aperiodic_thread(aperiodic_mumessage_message_log, PORT4_IRQn, 6);
 
-    int total_number_of_messages = 7;     // IMPLEMENT: NUMBER OF MESSAGES IN CONTACT'S MESSAGE LOG
+    int total_number_of_messages = message_log[contact].current_number_of_messages;     // IMPLEMENT: NUMBER OF MESSAGES IN CONTACT'S MESSAGE LOG
     int message_history_index = total_number_of_messages - 1;     // used to determine max index of message history
 
     /* print initial screen of message log (most current messages) */
@@ -2057,6 +2066,7 @@ void thread_mumessage_message_log_check_TP(void)
         /* return to MuMessage main screen */
         G8RTOS_add_thread(thread_mumessage_open_app, 180, "MM: open app");
 
+        G8RTOS_kill_current_thread();
     }
 
     // re-enable LCD Touch Panel interrupt and clear interrupt flag
@@ -2159,9 +2169,15 @@ void thread_mumessage_compose_message_check_TP(void)
     if (index == BACK_BUTTON_INDEX)
     {
         /* kill Compose Message (IMPLEMENT) */
+        /* kill Message Log (IMPLEMENT) */
+
+        //kill_compose_message = true;
+
+        //while(kill_compose_message); //wait for thread to die muahaha
 
         /* return to MuMessage main screen */
         G8RTOS_add_thread(thread_mumessage_open_app, 180, "MM: open app");
+        G8RTOS_kill_current_thread();
     }
 
     if (index == SEND_BUTTON_INDEX)     // send button was pressed
@@ -2183,7 +2199,15 @@ void thread_mumessage_compose_message_check_TP(void)
             G8RTOS_thread_sleep(400);
         }
     }
+    if(kill_compose_message)
+    {
+        GPIO_enableInterrupt(GPIO_PORT_P4, GPIO_PIN0);
+        GPIO_clearInterruptFlag(GPIO_PORT_P4, GPIO_PIN0);
 
+        // kill thread (rip)
+        G8RTOS_kill_current_thread();
+        kill_compose_message = false;
+    }
     // check if touch interacted with keyboard currently displayed
     switch (keyboard)
     {
@@ -2622,6 +2646,8 @@ void thread_mumessage_compose_message_check_TP(void)
 
         default:
             break;
+
+
 
     }
 
