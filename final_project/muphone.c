@@ -365,6 +365,21 @@ static inline void muphone_init(void)
     G8RTOS_launch();
 }
 
+
+static inline void kill_ballsy_threads()
+{
+    for(int i = 0; i< 10;i++)
+    {
+        G8RTOS_kill_thread(threads_to_kill[i]);
+    }
+}
+
+static inline void kill_mumessage_threads()
+{
+    G8RTOS_kill_thread(threads_to_kill(thread_mumessage_message_log));
+    G8RTOS_kill_pet(threads_to_kill(periodic_threads_to_kill(thread_blink_cursor)));
+}
+
 //////////////////////////////END OF PRIVATE FUNCTIONS///////////////////////////////
 
 ////////////////////////////////PUBLIC FUNCTIONS/////////////////////////////////////

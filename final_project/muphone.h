@@ -204,6 +204,30 @@
 //////////////////////////////PUBLIC DATA MEMBERS////////////////////////////////////
 //////////////////////////END OF PUBLIC DATA MEMBERS/////////////////////////////////
 
+//enum for threads to kill when a back button is pressed or the home button is pressed
+//used for indexing an array of threads to kill
+
+//NEED TO REINITIALIZE SEMAPHORES FOR THE THREADS THAT DIE
+typedef enum{
+    //for mumessage app
+    thread_mumessage_message_log = 10,
+    //for ballsy app
+
+
+}threads_to_kill_t;
+
+
+typedef enum{
+
+    thread_blink_cursor = 0,
+
+}periodic_threads_to_kill_t;
+
+//corresponding array of TID's for the threads that need to die
+tid_t threads_to_kill[11]; //unfortunately need to hardcode this, will automatically be set to zeros
+pid_t periodic_threads_to_kill[1];
+
+
 //////////////////////////////PRIVATE DATA MEMBERS///////////////////////////////////
 //////////////////////////END OF PRIVATE DATA MEMBERS////////////////////////////////
 
@@ -219,6 +243,11 @@
 * Output: N/A
 ************************************************************************************/
 void muphone(void);
+
+
+inline void kill_ballsy_threads();
+
+inline void kill_mumessage_threads();
 
 //////////////////////////END OF PUBLIC FUNCTION PROTOTYPES//////////////////////////
 

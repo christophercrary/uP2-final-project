@@ -776,6 +776,9 @@ const static char keyboard4_keys[30] =
                  'a', ' ', '|'
 };
 
+
+
+
 // static cursor to be used in any typing environment
 static Point cursor;
 
@@ -894,7 +897,6 @@ uint8_t messageStatus[7] = {0, 1, 0, 1, 1, 0, 0};
 
 // boolean to determine if application has previously been initialized
 static bool applicationInitialized = false;
-
 
 semaphore_t semaphore_cursor;
 
@@ -1990,6 +1992,10 @@ static void print_messages(int *message_history_index, uint8_t *number_of_messag
 ************************************************************************************/
 void thread_mumessage_message_log(void)
 {
+
+    threads_to_kill[thread_mumessage_message_log] = G8RTOS_get_tid();
+
+
     // draw necessary screen visuals
     LCD_DrawSection(section_message_log_background,
                     (sizeof(section_message_log_background)/sizeof(section_message_log_background[0])));

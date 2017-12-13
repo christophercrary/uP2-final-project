@@ -83,6 +83,8 @@ const static Rectangle section_ballsy_game_arena[] =
  ***********************************************************************************/
 static inline ball_t* add_ball(void)
 {
+
+
     // counter used to determine which ball is available in ball list (used for list traversal)
     static uint32_t temp_ball_counter;
 
@@ -114,6 +116,8 @@ static inline ball_t* add_ball(void)
                 break;      // first "dead" ball found, retain temp_ball_counter value
             }
         }
+
+        threads_to_kill[temp_ball_counter]=G8RTOS_get_tid();
 
         // add the new ball at the end of the ball list (also before the head)
         // update necessary ball linked list pointers
@@ -527,6 +531,8 @@ static inline bool kill_ball(void)
 
                 // kill respective ball thread
                 G8RTOS_kill_thread(temp_ball->thread_id);
+
+                threads_to_kill[i] = 0; //no tid
 
                 ballKilled = true;        // ball was killed
 

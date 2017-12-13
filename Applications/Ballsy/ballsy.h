@@ -15,7 +15,7 @@
 #define BALLSY_H_
 
 
-#define MAX_BALLS       20      // max number of balls allowed to be created
+#define MAX_BALLS       10      // max number of balls allowed to be created
 
 #define FIFO_coordinates    0      // first FIFO declared in FIFO list
                                    // the FIFO functions are garbage
