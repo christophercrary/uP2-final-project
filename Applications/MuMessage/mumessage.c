@@ -895,11 +895,17 @@ uint8_t messageStatus[7] = {0, 1, 0, 1, 1, 0, 0};
 // boolean to determine if application has previously been initialized
 static bool applicationInitialized = false;
 
+
+semaphore_t semaphore_cursor;
+
 // private count of number of unread (new) messages
 static uint16_t unread_message_count;
 
 // message log
 static Message_Log_t message_log[MAX_NUMBER_OF_CONTACTS];
+
+bool back_button_pressed = false;
+uint16_t cursor_color;
 
 //////////////////////////END OF PRIVATE DATA MEMBERS////////////////////////////////
 
@@ -917,6 +923,7 @@ static Message_Log_t message_log[MAX_NUMBER_OF_CONTACTS];
 static inline void insert_character(uint8_t character)
 {
     // IMPLEMENT: insert semaphore for cursor
+    G8RTOS_semaphore_wait(&semaphore_cursor);
 
     if (cursor.x < COMPOSE_MESSAGE_CURSOR_X_MAX)
     {
@@ -930,7 +937,7 @@ static inline void insert_character(uint8_t character)
                          (TEXT_ARENA_Y_MIN+2 + LCD_TEXT_HEIGHT), LCD_WHITE);
 
         LCD_PutChar(cursor.x, TEXT_ARENA_Y_MIN+2, character, LCD_TEXT_COLOR);
-        cursor.x += LCD_TEXT_WIDTH;
+        cursor.x += LCD_TEXT_WIDTH+CURSOR_OFFSET;
     }
     else if (cursor.y < COMPOSE_MESSAGE_CURSOR_Y_MAX)       // if new-lines can be created
     {
@@ -946,7 +953,18 @@ static inline void insert_character(uint8_t character)
         // wipe current line of text arena
         LCD_DrawSection(section_text_arena,
                         (sizeof(section_text_arena)/sizeof(section_text_arena[0])));
+
+        message_data.message[current_message_index++] = character;       // update current message
+
+             // the only way to successfully write back a character after deleting a character
+             // fucking beats Brit and I (QUESTION)
+             LCD_DrawRectangle(cursor.x, (cursor.x + LCD_TEXT_WIDTH), TEXT_ARENA_Y_MIN+2,
+                              (TEXT_ARENA_Y_MIN+2 + LCD_TEXT_HEIGHT), LCD_WHITE);
+
+             LCD_PutChar(cursor.x+CURSOR_OFFSET, TEXT_ARENA_Y_MIN+2, character, LCD_TEXT_COLOR);
+             cursor.x += LCD_TEXT_WIDTH + CURSOR_OFFSET;
     }
+    G8RTOS_semaphore_signal(&semaphore_cursor);
 
     return;
 }
@@ -959,6 +977,8 @@ static inline void insert_character(uint8_t character)
 ************************************************************************************/
 static inline void insert_new_line(void)
 {
+    G8RTOS_semaphore_wait(&semaphore_cursor);
+
     // IMPLEMENT: insert semaphore for cursor
     if (cursor.y < COMPOSE_MESSAGE_CURSOR_Y_MAX)
     {
@@ -975,6 +995,8 @@ static inline void insert_new_line(void)
         cursor.x = COMPOSE_MESSAGE_CURSOR_X_MIN;
         cursor.y += LCD_TEXT_HEIGHT;
     }
+    G8RTOS_semaphore_signal(&semaphore_cursor);
+
     return;
 }
 
@@ -988,6 +1010,9 @@ static inline void delete_character()
 {
     // IMPLEMENT: insert semaphore for cursor (for blinking)
 
+    G8RTOS_semaphore_wait(&semaphore_cursor);
+
+
     // check if any previously typed characters exist
     if (cursor.x > COMPOSE_MESSAGE_CURSOR_X_MIN ||
         cursor.y > COMPOSE_MESSAGE_CURSOR_Y_MIN)
@@ -996,7 +1021,7 @@ static inline void delete_character()
         LCD_DrawRectangle((cursor.x - LCD_TEXT_WIDTH), cursor.x, TEXT_ARENA_Y_MIN+2,
                           (TEXT_ARENA_Y_MIN+2 + LCD_TEXT_HEIGHT), LCD_WHITE);
 
-        cursor.x -= LCD_TEXT_WIDTH;
+        cursor.x -= (LCD_TEXT_WIDTH+CURSOR_OFFSET);
 
         /* check if previously entered character was new line (forced or vertical tab) */
         if ((message_data.message[current_message_index-1] == LF) ||     // guaranteed that LF follows CR
@@ -1051,7 +1076,7 @@ static inline void delete_character()
                                  (TEXT_ARENA_Y_MIN+2 + LCD_TEXT_HEIGHT), LCD_WHITE);
 
                 LCD_PutChar(cursor.x, TEXT_ARENA_Y_MIN+2, message_data.message[i], LCD_TEXT_COLOR);
-                cursor.x += LCD_TEXT_WIDTH;
+                cursor.x += LCD_TEXT_WIDTH+CURSOR_OFFSET;
             }
         }
         else        // otherwise, erase single character from currently composed message
@@ -1060,6 +1085,8 @@ static inline void delete_character()
             message_data.header_info.size_of_data--;    // decrement number of bytes to send
         }
     }
+    G8RTOS_semaphore_signal(&semaphore_cursor);
+
     return;
 }
 
@@ -1104,7 +1131,7 @@ static inline void send_message(Board_Type_t board_type, Intended_Recipient_t co
 
     SendData((uint8_t*)&message_data.header_info, ip_address, sizeof(message_data.header_info)); //send header info
     SendData((uint8_t*)&message_data.to_and_from, ip_address, sizeof(message_data.to_and_from)); //send contact information (who I am trying to communicate with and who I am)
-    SendData((uint8_t*)&message_data.message[contact], ip_address, (message_data.header_info.size_of_data)); //send actual message
+    SendData((uint8_t*)&message_data.message[0], ip_address, (message_data.header_info.size_of_data)); //send actual message
 
     G8RTOS_semaphore_signal(&semaphore_CC3100);
 
@@ -1121,8 +1148,11 @@ static inline void send_message(Board_Type_t board_type, Intended_Recipient_t co
     LCD_DrawSection(section_text_arena,
                     (sizeof(section_text_arena)/sizeof(section_text_arena[0])));
     //reset cursors
+    G8RTOS_semaphore_wait(&semaphore_cursor);
+
     cursor.x = COMPOSE_MESSAGE_CURSOR_X_MIN;
     cursor.y = COMPOSE_MESSAGE_CURSOR_Y_MIN;
+    G8RTOS_semaphore_signal(&semaphore_cursor);
 
     while(current_message_index != 0)
     {
@@ -1173,7 +1203,7 @@ static void print_messages_up(int *message_history_index)
             // read character from message
             //temp_char = message_array[*message_history_index][index++];
             temp_char = message_log[contact].message_history[*message_history_index].old_message[index++];
-            if (temp_char != ETX)        // ignore end of text characters from message
+            if (temp_char != ETX && temp_char != 0)        // ignore end of text characters from message
             {
                 if (temp_char == VT)      // soft new line encountered
                 {
@@ -1254,7 +1284,7 @@ static void print_messages_up(int *message_history_index)
               //  temp_char = message_array[*message_history_index][index++];
                 temp_char = message_log[contact].message_history[*message_history_index].old_message[index++];
 
-                if (temp_char != ETX)        // ignore end of text characters from message
+                if (temp_char != ETX && temp_char != 0)        // ignore end of text characters from message
                 {
                     if (temp_char == VT)    // soft new line encountered
                     {
@@ -1270,8 +1300,8 @@ static void print_messages_up(int *message_history_index)
                     }
                     else
                     {
-                        LCD_PutChar(x, y, temp_char, MESSAGE_LOG_MESSAGE_TEXT_COLOR);       // place next character
-                        x += LCD_TEXT_WIDTH;        // increment cursor position
+                         LCD_PutChar(x, y, temp_char, MESSAGE_LOG_MESSAGE_TEXT_COLOR);       // place next character
+                          x += LCD_TEXT_WIDTH;        // increment cursor position
                     }
                 }
 
@@ -1312,7 +1342,7 @@ static void print_messages_up(int *message_history_index)
                // temp_char = message_array[*message_history_index][index++];
                 temp_char = message_log[contact].message_history[*message_history_index].old_message[index++];
 
-                if (temp_char != ETX)        // ignore end of text characters from message
+                if (temp_char != ETX && temp_char != 0)        // ignore end of text characters from message
                 {
                     if (temp_char == VT)    // soft new line encountered
                     {
@@ -1344,8 +1374,8 @@ static void print_messages_up(int *message_history_index)
         }
         else
         {
-        // retrieve previous message on the next iteration
-        (*message_history_index) = (*message_history_index) - 1;
+            // retrieve previous message on the next iteration
+            (*message_history_index) = (*message_history_index) - 1;
         }
     }
 
@@ -2125,6 +2155,8 @@ void thread_mumessage_compose_message(void)
     message_data.header_info.intended_app = MUMESSAGE;
     message_data.header_info.size_of_data = 0;
 
+    cursor_color =  COMPOSE_MESSAGE_BACKGROUND_COLOR;
+
     // re-enable P4 interrupt
     GPIO_enableInterrupt(GPIO_PORT_P4, GPIO_PIN0);
 
@@ -2171,9 +2203,8 @@ void thread_mumessage_compose_message_check_TP(void)
         /* kill Compose Message (IMPLEMENT) */
         /* kill Message Log (IMPLEMENT) */
 
-        //kill_compose_message = true;
-
-        //while(kill_compose_message); //wait for thread to die muahaha
+        back_button_pressed=true;
+        while(back_button_pressed); //wait for thread to die muahaha
 
         /* return to MuMessage main screen */
         G8RTOS_add_thread(thread_mumessage_open_app, 180, "MM: open app");
@@ -2685,6 +2716,7 @@ void thread_mumessage_open_app(void)
     /* add aperiodic thread to detect touches made to the main screen */
     G8RTOS_add_aperiodic_thread(aperiodic_mumessage_main_screen, PORT4_IRQn, 6);
 
+   // G8RTOS_add_thread(thread_blink_cursor, 50, "blink Cursor");
 
     if(phone.self_contact == BRIT)
     {
@@ -2698,6 +2730,7 @@ void thread_mumessage_open_app(void)
         message_data.to_and_from.contact_of_sender = CHRIS;
 
     }
+    G8RTOS_semaphore_init(&semaphore_cursor,1);
 
     // cya dood
     G8RTOS_kill_current_thread();
@@ -2750,7 +2783,7 @@ void thread_mumessage_start_app(void)
     /* start main screen of MuMessage */
 
     G8RTOS_add_thread(thread_mumessage_open_app, 180, "MM: open app");
-
+    //G8RTOS_add_thread(thread_blink_cursor, 50, "blink Cursor");
     phone.current_app = MUMESSAGE;      // set current app in phone (IMPLEMENT: DO THIS EVERYWHERE)
 
     G8RTOS_kill_current_thread();
@@ -2791,6 +2824,43 @@ void thread_receive_message_data()
 }
 
 
+
+void thread_blink_cursor()
+{
+
+    while(1)
+    {
+
+        if(back_button_pressed)
+        {
+            back_button_pressed = false;
+            G8RTOS_kill_current_thread();
+        }
+
+
+        G8RTOS_semaphore_wait(&semaphore_cursor);
+
+        if(cursor_color == COMPOSE_MESSAGE_BACKGROUND_COLOR)
+        {
+            LCD_DrawRectangle(cursor.x, cursor.x+CURSOR_WIDTH, TEXT_ARENA_Y_MIN + 2, TEXT_ARENA_Y_MIN + 2 + CURSOR_HEIGHT, CURSOR_COLOR);
+            cursor_color = CURSOR_COLOR;
+        }
+        else
+        {
+            LCD_DrawRectangle(cursor.x, cursor.x+CURSOR_WIDTH, TEXT_ARENA_Y_MIN + 2, TEXT_ARENA_Y_MIN + 2 + CURSOR_HEIGHT, COMPOSE_MESSAGE_BACKGROUND_COLOR);
+             cursor_color = COMPOSE_MESSAGE_BACKGROUND_COLOR;
+        }
+
+
+        G8RTOS_semaphore_signal(&semaphore_cursor);
+
+        G8RTOS_thread_sleep(600);
+
+    }
+
+
+}
+
 void thread_send_pong_data()
 {
 
@@ -2820,7 +2890,6 @@ void thread_receive_pong_data()
     G8RTOS_kill_current_thread(); //kill thread
 
 }
-
 
 
 /**************************** END OF COMMON THREADS ********************************/

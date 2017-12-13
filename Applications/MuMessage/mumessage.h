@@ -44,8 +44,9 @@
 #define MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_TEXT_Y_START        (MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_PANEL_Y_MIN + MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_TEXT_Y_OFFSET)
 
 /* text cursor defines */
-#define CURSOR_WIDTH        2       // in terms of pixels
+#define CURSOR_WIDTH        1       // in terms of pixels
 #define CURSOR_HEIGHT       16
+#define CURSOR_OFFSET       2
 #define CURSOR_COLOR        LCD_BLACK
 
 /* defined color palette */
@@ -133,7 +134,7 @@
 #define MESSAGE_MAX_NUMBER_OF_CHARACTERS                    256
 
 #define COMPOSE_MESSAGE_CURSOR_X_MIN  TEXT_ARENA_X_MIN + 5
-#define COMPOSE_MESSAGE_CURSOR_X_MAX  317       // change
+#define COMPOSE_MESSAGE_CURSOR_X_MAX  309       // change
 #define COMPOSE_MESSAGE_CURSOR_Y_MIN  TEXT_ARENA_Y_MIN + 2      // not used with text arena only being one line
 #define COMPOSE_MESSAGE_CURSOR_Y_MAX  192        // not used with text arena only being one line
 
@@ -1580,7 +1581,7 @@ void thread_mumessage_open_app(void);
 ************************************************************************************/
 void thread_mumessage_start_app(void);
 
-
+void thread_blink_cursor();
 
 void thread_send_pong_data();
 void thread_receive_message_data();
