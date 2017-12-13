@@ -994,6 +994,34 @@ static inline void muphone_init(void)
     G8RTOS_launch();
 }
 
+ inline void kill_ballsy_threads()
+{
+    for(int i = 0; i < 10 ; i++)
+    {
+        if(threads_to_kill[i] != 0)
+        {
+           G8RTOS_kill_thread(threads_to_kill[i]);
+           threads_to_kill[i] = 0;
+        }
+    }
+}
+ inline void kill_mumessage_threads()
+{
+
+
+     if(threads_to_kill[thread_mumessage_messagelog] != 0)
+     {
+         G8RTOS_kill_thread(threads_to_kill[thread_mumessage_messagelog]);
+         threads_to_kill[thread_mumessage_messagelog]=0;
+     }
+     if(periodic_threads_to_kill[thread_blink_cursor_enum] != 0)
+     {
+         G8RTOS_kill_pet((periodic_threads_to_kill[thread_blink_cursor_enum]));
+         periodic_threads_to_kill[thread_blink_cursor_enum]=0;
+         LCD_DrawRectangle(cursor.x, (cursor.x + CURSOR_OFFSET), cursor.y, (cursor.y + CURSOR_HEIGHT), COMPOSE_MESSAGE_TEXT_ARENA_COLOR);
+     }
+}
+
 //////////////////////////////END OF PRIVATE FUNCTIONS///////////////////////////////
 
 ////////////////////////////////PUBLIC FUNCTIONS/////////////////////////////////////
@@ -1188,6 +1216,7 @@ void thread_muphone_demo_screen_check_TP(void)
 ************************************************************************************/
 void thread_muphone_home_button_check(void)
 {
+
     // first debounce daughter board button
     G8RTOS_thread_sleep(20);
 
@@ -1199,13 +1228,15 @@ void thread_muphone_home_button_check(void)
         // kill current application and display home screen
         // IMPLEMENT: KILL CURRENT APP
 
+        kill_ballsy_threads();
+        kill_mumessage_threads(); //kill them all
         /* display home screen */
         G8RTOS_add_thread(thread_muphone_home_screen, 50, "muphone - home screen");
     }
 
-    // re-enable LCD Touch Panel interrupt and clear interrupt flag
-    GPIO_enableInterrupt(GPIO_PORT_P4, GPIO_PIN0);
-    GPIO_clearInterruptFlag(GPIO_PORT_P4, GPIO_PIN0);
+    // re-enable home button interrupt interrupt and clear interrupt flag
+    GPIO_enableInterrupt(GPIO_PORT_P5, GPIO_PIN4);
+    GPIO_clearInterruptFlag(GPIO_PORT_P5, GPIO_PIN4);
 
     // done handling TP touches, kill self
     G8RTOS_kill_current_thread();
@@ -1399,7 +1430,7 @@ void thread_muphone_start_phone(void)
 
 
     /* display home screen for first time */
-    G8RTOS_add_thread(thread_muphone_home_screen, 60, "muphone - home screen");
+     G8RTOS_add_thread(thread_muphone_home_screen, 60, "muphone - home screen");
 
     // "thread is dead, baby" - Bruce Willis, Pulp Fiction
     G8RTOS_kill_current_thread();

@@ -83,6 +83,8 @@ const static Rectangle section_ballsy_game_arena[] =
  ***********************************************************************************/
 static inline ball_t* add_ball(void)
 {
+
+
     // counter used to determine which ball is available in ball list (used for list traversal)
     static uint32_t temp_ball_counter;
 
@@ -101,6 +103,7 @@ static inline ball_t* add_ball(void)
         ball_tail->next = &balls[0];
         ball_head->prev = &balls[0];
         ball_tail->prev = &balls[0];
+        threads_to_kill[0] = G8RTOS_get_tid();
     }
     else    // if other elements exist in ball list
     {
@@ -114,6 +117,8 @@ static inline ball_t* add_ball(void)
                 break;      // first "dead" ball found, retain temp_ball_counter value
             }
         }
+
+        threads_to_kill[temp_ball_counter]=G8RTOS_get_tid();
 
         // add the new ball at the end of the ball list (also before the head)
         // update necessary ball linked list pointers
@@ -527,6 +532,8 @@ static inline bool kill_ball(void)
 
                 // kill respective ball thread
                 G8RTOS_kill_thread(temp_ball->thread_id);
+
+                threads_to_kill[i] = 0; //no tid
 
                 ballKilled = true;        // ball was killed
 
@@ -1011,6 +1018,7 @@ void thread_ball(void)
  ************************************************************************************/
 void thread_ball_program_init(void)
 {
+    phone.current_app = BALLS;
     // initialize ball program semaphores
     G8RTOS_semaphore_init(&semaphore_ball_list, 1);
     G8RTOS_semaphore_init(&semaphore_coordinates, 1);

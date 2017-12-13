@@ -317,7 +317,7 @@ G8RTOS_response_code_t G8RTOS_add_pet(void (*handler)(void), uint32_t period,
     PET[temp_pet_counter].handler = handler;       // assign PET function
 
     // assign new PET's ID
-    PET[temp_pet_counter].pet_id = (((pid_count++) << 16) | temp_pet_counter);
+    PET[temp_pet_counter].pet_id = (((pid_count++) << 16) | temp_pet_counter) + 1;
 
     // assign new PET's name (from passed-in char array)
     for (uint8_t i = 0; i < MAX_NAME_LENGTH; i++)
@@ -442,7 +442,7 @@ G8RTOS_response_code_t G8RTOS_add_thread(void (*thread_function)(void),
     
     // assign new thread's ID (as defined in Lab 4)
     // why can't we just assign tid_count to thread_id?
-    TCB[temp_thread_counter].thread_id = (((tid_count++) << 16) | temp_thread_counter);
+    TCB[temp_thread_counter].thread_id = (((tid_count++) << 16) | temp_thread_counter)+1;
 
     // assign new thread's name (from passed-in char array)
     for (uint8_t i = 0; i < MAX_NAME_LENGTH; i++)
@@ -469,6 +469,11 @@ G8RTOS_response_code_t G8RTOS_add_thread(void (*thread_function)(void),
 tid_t G8RTOS_get_tid(void)
 {
     return running_thread_ptr->thread_id;
+}
+
+pid_t G8RTOS_get_pid()
+{
+    return PET_head->pet_id;
 }
 
 /************************************************************************************
@@ -588,10 +593,10 @@ G8RTOS_response_code_t G8RTOS_kill_all_other_threads()
 G8RTOS_response_code_t G8RTOS_kill_pet(pid_t pet_id)
 {
     // check if no PETs are running
-    if (PET_count < 1)
-    {
-        return cannot_kill_pet;     // return -11
-    }
+ //   if (PET_count < 1)
+  //  {
+   //     return cannot_kill_pet;     // return -11
+   // }
 
     // enter critical section
     int32_t primask_status = G8RTOS_START_CRITICAL_SECTION();
