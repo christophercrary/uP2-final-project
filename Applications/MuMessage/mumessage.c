@@ -1118,7 +1118,8 @@ static inline void send_message(Board_Type_t board_type, Intended_Recipient_t co
         //sending data from host to client
         ip_address = client1.IP_address; //CURRENTLY ONLY FOR FIRST CLIENT IMPLEMENT OTHER CLIENT LATER
     }
-   // else if(contact == WES)
+
+    //else if(contact == WES)
     //{
      //   ip_address = client2.IP_address;
     //}
@@ -1154,9 +1155,10 @@ static inline void send_message(Board_Type_t board_type, Intended_Recipient_t co
     cursor.y = COMPOSE_MESSAGE_CURSOR_Y_MIN;
     G8RTOS_semaphore_signal(&semaphore_cursor);
 
-    while(current_message_index != 0)
+    message_data.header_info.size_of_data = 0;
+    for(uint16_t i = current_message_index; i>=0; i--)
     {
-        message_data.message[current_message_index--]=0; //reset array
+        message_data.message[i]=0; //reset array
     }
 
 
@@ -2203,8 +2205,8 @@ void thread_mumessage_compose_message_check_TP(void)
         /* kill Compose Message (IMPLEMENT) */
         /* kill Message Log (IMPLEMENT) */
 
-        back_button_pressed=true;
-        while(back_button_pressed); //wait for thread to die muahaha
+       // back_button_pressed=true;
+      //  while(back_button_pressed); //wait for thread to die muahaha
 
         /* return to MuMessage main screen */
         G8RTOS_add_thread(thread_mumessage_open_app, 180, "MM: open app");
@@ -2836,8 +2838,6 @@ void thread_blink_cursor()
             back_button_pressed = false;
             G8RTOS_kill_current_thread();
         }
-
-
         G8RTOS_semaphore_wait(&semaphore_cursor);
 
         if(cursor_color == COMPOSE_MESSAGE_BACKGROUND_COLOR)
@@ -2850,11 +2850,9 @@ void thread_blink_cursor()
             LCD_DrawRectangle(cursor.x, cursor.x+CURSOR_WIDTH, TEXT_ARENA_Y_MIN + 2, TEXT_ARENA_Y_MIN + 2 + CURSOR_HEIGHT, COMPOSE_MESSAGE_BACKGROUND_COLOR);
              cursor_color = COMPOSE_MESSAGE_BACKGROUND_COLOR;
         }
-
-
         G8RTOS_semaphore_signal(&semaphore_cursor);
 
-        G8RTOS_thread_sleep(600);
+        G8RTOS_thread_sleep(750);
 
     }
 
