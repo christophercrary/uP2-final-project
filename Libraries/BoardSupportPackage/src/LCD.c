@@ -434,6 +434,216 @@ void LCD_PrintTextSection(const Text *texts, uint16_t array_size)
 }
 
 /*******************************************************************************
+ * Function Name  : LCD_DrawExtraSmallImage
+ * Description    : Draw an extrasmall image
+ * Input          : xStart, xEnd, yStart, yEnd, uint8_t image_array[][20]
+ * Output         : None
+ * Return         : None
+ * Attention      : Must draw from left to right, top to bottom!
+ *******************************************************************************/
+void LCD_DrawExtraSmallImage(int16_t xStart, int16_t xEnd, int16_t yStart, int16_t yEnd, const uint8_t image_array[][20])
+{
+
+    /* Check special cases for out of bounds */
+    if (xStart < MIN_SCREEN_X)
+    {
+        xStart = MIN_SCREEN_X;
+    }
+    if (xEnd > MAX_SCREEN_X)
+    {
+        xEnd = MAX_SCREEN_X;
+    }
+    if (yStart < MIN_SCREEN_Y)
+    {
+        yStart = MIN_SCREEN_Y;
+    }
+    if (yEnd > MAX_SCREEN_Y)
+    {
+        yEnd = MAX_SCREEN_Y;
+    }
+
+    // check if rectangle size is zero or negative
+    // check here because xStart and yStart could have been updated above
+    if ( (xStart >= xEnd) || (yStart >= yEnd) )
+    {
+        return;     // cannot draw rectangle
+    }
+
+    /* Set window area for high-speed RAM write */
+    LCD_WriteReg(HOR_ADDR_START_POS, yStart);
+    LCD_WriteReg(HOR_ADDR_END_POS, yEnd);
+    LCD_WriteReg(VERT_ADDR_START_POS, xStart);
+    LCD_WriteReg(VERT_ADDR_END_POS, xEnd);
+
+
+    /* Set cursor */
+    LCD_SetCursor(xStart, yStart);
+
+    /* Set index to GRAM */
+    LCD_WriteIndex(GRAM);
+
+    /* Send out data only to the entire area */
+
+    // select the LCD device
+    SPI_CS_LCD_LOW;
+
+    // write start byte for sequential GRAM data only ONCE!
+    LCD_Write_Data_Start();
+
+    // fill entire screen with color
+    for (int16_t j = yStart+4; j <= yEnd-4; j++)
+    {
+        for (int16_t i = xStart; i <= xEnd; i++)
+        {
+            LCD_Write_Data_Only(LCD_8bit_to_16bit(image_array[j-yStart][i-xStart])); // write specified color to every pixel
+        }
+    }
+
+    // de-select the LCD
+    SPI_CS_LCD_HIGH;
+}
+
+/*******************************************************************************
+ * Function Name  : LCD_DrawSmallImage
+ * Description    : Draw a small image
+ * Input          : xStart, xEnd, yStart, yEnd, uint8_t image_array[][55]
+ * Output         : None
+ * Return         : None
+ * Attention      : Must draw from left to right, top to bottom!
+ *******************************************************************************/
+void LCD_DrawSmallImage(int16_t xStart, int16_t xEnd, int16_t yStart, int16_t yEnd, const uint8_t image_array[][55])
+{
+
+    /* Check special cases for out of bounds */
+    if (xStart < MIN_SCREEN_X)
+    {
+        xStart = MIN_SCREEN_X;
+    }
+    if (xEnd > MAX_SCREEN_X)
+    {
+        xEnd = MAX_SCREEN_X;
+    }
+    if (yStart < MIN_SCREEN_Y)
+    {
+        yStart = MIN_SCREEN_Y;
+    }
+    if (yEnd > MAX_SCREEN_Y)
+    {
+        yEnd = MAX_SCREEN_Y;
+    }
+
+    // check if rectangle size is zero or negative
+    // check here because xStart and yStart could have been updated above
+    if ( (xStart >= xEnd) || (yStart >= yEnd) )
+    {
+        return;     // cannot draw rectangle
+    }
+
+    /* Set window area for high-speed RAM write */
+    LCD_WriteReg(HOR_ADDR_START_POS, yStart);
+    LCD_WriteReg(HOR_ADDR_END_POS, yEnd);
+    LCD_WriteReg(VERT_ADDR_START_POS, xStart);
+    LCD_WriteReg(VERT_ADDR_END_POS, xEnd);
+
+
+    /* Set cursor */
+    LCD_SetCursor(xStart, yStart);
+
+    /* Set index to GRAM */
+    LCD_WriteIndex(GRAM);
+
+    /* Send out data only to the entire area */
+
+    // select the LCD device
+    SPI_CS_LCD_LOW;
+
+    // write start byte for sequential GRAM data only ONCE!
+    LCD_Write_Data_Start();
+
+    // fill entire screen with color
+    for (int16_t j = yStart; j <= yEnd; j++)
+    {
+        for (int16_t i = xStart; i <= xEnd; i++)
+        {
+            LCD_Write_Data_Only(LCD_8bit_to_16bit(image_array[j-yStart][i-xStart])); // write specified color to every pixel
+        }
+    }
+
+    // de-select the LCD
+    SPI_CS_LCD_HIGH;
+}
+
+/*******************************************************************************
+ * Function Name  : LCD_DrawBigImage
+ * Description    : Draw a big image
+ * Input          : xStart, xEnd, yStart, yEnd, image_array
+ * Output         : None
+ * Return         : None
+ * Attention      : Must draw from left to right, top to bottom!
+ *******************************************************************************/
+void LCD_DrawBigImage(int16_t xStart, int16_t xEnd, int16_t yStart, int16_t yEnd, uint8_t image_array[][320])
+{
+
+    /* Check special cases for out of bounds */
+    if (xStart < MIN_SCREEN_X)
+    {
+        xStart = MIN_SCREEN_X;
+    }
+    if (xEnd > MAX_SCREEN_X)
+    {
+        xEnd = MAX_SCREEN_X;
+    }
+    if (yStart < MIN_SCREEN_Y)
+    {
+        yStart = MIN_SCREEN_Y;
+    }
+    if (yEnd > MAX_SCREEN_Y)
+    {
+        yEnd = MAX_SCREEN_Y;
+    }
+
+    // check if rectangle size is zero or negative
+    // check here because xStart and yStart could have been updated above
+    if ( (xStart >= xEnd) || (yStart >= yEnd) )
+    {
+        return;     // cannot draw rectangle
+    }
+
+    /* Set window area for high-speed RAM write */
+    LCD_WriteReg(HOR_ADDR_START_POS, yStart);
+    LCD_WriteReg(HOR_ADDR_END_POS, yEnd);
+    LCD_WriteReg(VERT_ADDR_START_POS, xStart);
+    LCD_WriteReg(VERT_ADDR_END_POS, xEnd);
+
+
+    /* Set cursor */
+    LCD_SetCursor(xStart, yStart);
+
+    /* Set index to GRAM */
+    LCD_WriteIndex(GRAM);
+
+    /* Send out data only to the entire area */
+
+    // select the LCD device
+    SPI_CS_LCD_LOW;
+
+    // write start byte for sequential GRAM data only ONCE!
+    LCD_Write_Data_Start();
+
+    // fill entire screen with color
+    for (int16_t j = yStart; j <= yEnd; j++)
+    {
+        for (int16_t i = xStart; i <= xEnd; i++)
+        {
+            LCD_Write_Data_Only(LCD_8bit_to_16bit(image_array[j-yStart][i-xStart])); // write specified color to every pixel
+        }
+    }
+
+    // de-select the LCD
+    SPI_CS_LCD_HIGH;
+}
+
+/*******************************************************************************
  * Function Name  : LCD_Clear
  * Description    : Fill the screen as the specified color
  * Input          : - Color: Screen Color

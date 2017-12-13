@@ -34,6 +34,32 @@ extern semaphore_t semaphore_CC3100;          // used to access CC3100 WiFi chip
 
 //////////////////////////////PRIVATE DATA MEMBERS///////////////////////////////////
 
+
+/* message notification image */
+const uint8_t message_notification_icon_data[20][20] = {
+                                        { 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+                                        { 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+                                        { 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+                                        { 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+                                        { 182, 145, 145, 145, 145, 145, 145, 145, 145, 145, 145, 145, 145, 145, 145, 145, 145, 145, 145, 182},
+                                        { 182, 145, 145, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 182, 145, 182},
+                                        { 182, 145, 182, 145, 250, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 250, 145, 182, 182},
+                                        { 182, 145, 255, 182, 145, 250, 255, 255, 255, 255, 255, 255, 255, 255, 255, 250, 145, 250, 182, 182},
+                                        { 182, 145, 255, 255, 145, 145, 250, 255, 255, 255, 255, 255, 255, 255, 250, 145, 250, 255, 182, 182},
+                                        { 182, 145, 255, 255, 250, 145, 145, 250, 255, 255, 255, 255, 255, 250, 145, 250, 255, 255, 182, 182},
+                                        { 182, 145, 250, 250, 250, 250, 145, 145, 250, 250, 250, 250, 182, 145, 250, 250, 250, 250, 182, 182},
+                                        { 182, 145, 250, 250, 250, 250, 145, 145, 182, 250, 250, 182, 145, 145, 182, 250, 250, 250, 182, 182},
+                                        { 182, 145, 250, 250, 250, 145, 182, 250, 145, 145, 145, 145, 182, 250, 145, 182, 250, 250, 182, 182},
+                                        { 182, 145, 250, 250, 145, 182, 250, 250, 250, 250, 250, 250, 250, 250, 250, 145, 182, 250, 182, 182},
+                                        { 182, 145, 182, 145, 182, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 145, 145, 182, 182},
+                                        { 182, 145, 145, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 182, 145, 182},
+                                        { 182, 145, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 145, 182},
+                                        { 182, 145, 182, 182, 182, 182, 182, 182, 182, 182, 182, 182, 182, 182, 182, 182, 182, 182, 145, 182},
+                                        { 250, 182, 182, 182, 182, 182, 182, 182, 182, 182, 182, 182, 182, 182, 182, 182, 182, 182, 182, 250},
+                                        { 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+                                    };
+
+
 /* main screen */
 
 const Rectangle section_mumessage_main_screen[] =
@@ -1653,17 +1679,25 @@ void thread_mumessage_background_processes(void)
     uint16_t previous_unread_message_count = 0;
 
     // local string used to store entire unread message notification
-    char unread_message_notification[16];
+    char unread_message_notification[4];
 
-    // initialize unread_message_count_str with initial value
-    sprintf(unread_message_notification, "%u New Messages", previous_unread_message_count);
+//    // initialize unread_message_count_str with initial value
+//    sprintf(unread_message_notification, "%u", previous_unread_message_count);
 
 
-    // local Rectangle structure, used to update notifications in header bar (used to wipe previous notification)
-    Rectangle section_unread_message_notification =
+    // local Rectangle structure, used to wipe notifications
+    Rectangle section_unread_message_notification_panel =
     {
       .xMin = MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_PANEL_X_MIN, .xMax = MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_PANEL_X_MAX,
       .yMin = MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_PANEL_Y_MIN, .yMax = MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_PANEL_Y_MAX,
+      .color = MUPHONE_HEADER_BAR_COLOR
+    };
+
+    // local Rectangle structure, used to update notifications in header bar (used to print message box imagenotification)
+    Rectangle section_unread_message_notification_icon =
+    {
+      .xMin = MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_ICON_X_MIN, .xMax = MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_ICON_X_MAX,
+      .yMin = MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_ICON_Y_MIN, .yMax = MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_ICON_Y_MAX,
       .color = MUPHONE_HEADER_BAR_COLOR
     };
 
@@ -1671,12 +1705,20 @@ void thread_mumessage_background_processes(void)
     Text text_section_unread_message_notification =
     {
      .xStart = MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_TEXT_X_START, .yStart = MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_TEXT_Y_START,
-     .string = unread_message_notification, .color = MUPHONE_HEADER_BAR_NOTIFICATION_TEXT_COLOR
+     .string = unread_message_notification, .color = MUPHONE_HEADER_BAR_IMPORTANT_NOTIFICATION_TEXT_COLOR
     };
 
 
-    // write initial notification status
-    LCD_DrawRectangleStructure(section_unread_message_notification);
+    // clear notification area
+    LCD_DrawRectangleStructure(section_unread_message_notification_panel);
+
+    // draw message notification icon
+    LCD_DrawExtraSmallImage(MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_ICON_X_MIN, MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_ICON_X_MAX,
+                            MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_ICON_Y_MIN, MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_ICON_Y_MAX, message_notification_icon_data);
+
+    // hack into the mainframe
+    LCD_DrawRectangle(MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_ICON_X_MIN, MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_ICON_X_MIN + 1,
+                      MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_ICON_Y_MIN, MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_ICON_Y_MAX-5, MUPHONE_HEADER_BAR_COLOR);
 
     // print updated unread message notification
     LCD_PrintTextStructure(text_section_unread_message_notification);
@@ -1688,41 +1730,50 @@ void thread_mumessage_background_processes(void)
         {
             previous_unread_message_count = unread_message_count;       // update local count
 
+            sprintf(unread_message_notification, "%u", previous_unread_message_count);
+
+
             /* update MuPhone header bar with current amount of unread messages */
 
-            // edge case for notification grammar
-            if (previous_unread_message_count == 1)
-            {
-                // update unread_message_count_str with current value
-                sprintf(unread_message_notification, "%u New Message", previous_unread_message_count);
-            }
-            else
-            {
-                // update unread_message_count_str with current value
-                sprintf(unread_message_notification, "%u New Messages", previous_unread_message_count);
-            }
+//            // edge case for notification grammar
+//            if (previous_unread_message_count == 1)
+//            {
+//                // update unread_message_count_str with current value
+//                sprintf(unread_message_notification, "%u New Message", previous_unread_message_count);
+//            }
+//            else
+//            {
+//                // update unread_message_count_str with current value
+//                sprintf(unread_message_notification, "%u New Messages", previous_unread_message_count);
+//            }
 
-            // check if update needs to be made to text color
-            if ((previous_unread_message_count == 0) &&
-                (text_section_unread_message_notification.color != MUPHONE_HEADER_BAR_NOTIFICATION_TEXT_COLOR))
-            {
-                text_section_unread_message_notification.color = MUPHONE_HEADER_BAR_NOTIFICATION_TEXT_COLOR;
-            }
-            else if ((previous_unread_message_count > 0) &&
-                    (text_section_unread_message_notification.color != MUPHONE_HEADER_BAR_IMPORTANT_NOTIFICATION_TEXT_COLOR))
-            {
-                text_section_unread_message_notification.color = MUPHONE_HEADER_BAR_IMPORTANT_NOTIFICATION_TEXT_COLOR;
-            }
+//            // check if update needs to be made to text color
+//            if ((previous_unread_message_count == 0) &&
+//                (text_section_unread_message_notification.color != MUPHONE_HEADER_BAR_NOTIFICATION_TEXT_COLOR))
+//            {
+//                text_section_unread_message_notification.color = MUPHONE_HEADER_BAR_NOTIFICATION_TEXT_COLOR;
+//            }
 
             // update local Text structure
             text_section_unread_message_notification.string = unread_message_notification;
 
 
-            // wipe previous notification from MuPhone header bar
-            LCD_DrawRectangleStructure(section_unread_message_notification);
+            // clear notification area
+            LCD_DrawRectangleStructure(section_unread_message_notification_panel);
 
-            // print updated unread message notification
-            LCD_PrintTextStructure(text_section_unread_message_notification);
+//            // draw message notification icon
+//            LCD_DrawExtraSmallImage(MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_ICON_X_MIN, MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_ICON_X_MAX + 20,
+//                                    MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_ICON_Y_MIN, MUPHONE_HEADER_BAR_MESSAGE_NOTIFICATION_ICON_Y_MAX + 2, message_notification_icon_data);
+
+
+            if ((previous_unread_message_count > 0))
+            {
+                //text_section_unread_message_notification.color = MUPHONE_HEADER_BAR_IMPORTANT_NOTIFICATION_TEXT_COLOR;
+
+                // print updated unread message notification
+                LCD_PrintTextStructure(text_section_unread_message_notification);
+            }
+
         }
 
         // sleep notification checking for a second
@@ -2182,14 +2233,6 @@ void thread_mumessage_compose_message_check_TP(void)
     {
         /* kill Compose Message (IMPLEMENT) */
         /* kill Message Log (IMPLEMENT) */
-
-<<<<<<< HEAD
-        //back_button_pressed=true;
-        //while(back_button_pressed); //wait for thread to die muahaha
-=======
-       // back_button_pressed=true;
-      //  while(back_button_pressed); //wait for thread to die muahaha
->>>>>>> 7156c47a811dcd0a4b710760ccb2e3baf57d6364
 
         /* return to MuMessage main screen */
         G8RTOS_add_thread(thread_mumessage_open_app, 180, "MM: open app");
@@ -2675,233 +2718,6 @@ void thread_mumessage_compose_message_check_TP(void)
     G8RTOS_kill_current_thread();
 }
 
-//void thread_blink_cursor()
-//{
-//
-//    while(1)
-//    {
-//
-//        G8RTOS_semaphore_wait(&semaphore_cursor);
-//
-//        if(cursor_color == COMPOSE_MESSAGE_BACKGROUND_COLOR)
-//        {
-//            LCD_DrawRectangle(cursor.x, cursor.x + CURSOR_WIDTH, TEXT_ARENA_Y_MIN + 2, TEXT_ARENA_Y_MIN + 2 + CURSOR_HEIGHT, CURSOR_COLOR);
-//            cursor_color = CURSOR_COLOR;
-//        }
-//        else
-//        {
-//            LCD_DrawRectangle(cursor.x, cursor.x + CURSOR_WIDTH, TEXT_ARENA_Y_MIN + 2, TEXT_ARENA_Y_MIN + 2 + CURSOR_HEIGHT, COMPOSE_MESSAGE_BACKGROUND_COLOR);
-//             cursor_color = COMPOSE_MESSAGE_BACKGROUND_COLOR;
-//        }
-//
-//        G8RTOS_semaphore_signal(&semaphore_cursor);
-//
-//        G8RTOS_thread_sleep(600);
-//
-//    }
-//
-//
-//}
-
-//void thread_read_joystick_update_cursor()
-//{
-//
-//    int16_t xPos;
-//    int16_t yPos;
-//    while(1)
-//    {
-//        GetJoystickCoordinates(&xPos, &yPos);
-//
-//        G8RTOS_semaphore_wait(&semaphore_cursor);
-//
-//        if (cursor_color == COMPOSE_MESSAGE_BACKGROUND_COLOR)
-//        {
-//
-//            if (xPos > 5000)
-//            {
-//                if (cursor.x != COMPOSE_MESSAGE_CURSOR_X_MIN)
-//                {
-//                    cursor.x -= (LCD_TEXT_WIDTH + CURSOR_OFFSET);
-//                    current_message_index--;
-//                }
-//            }
-//            else if (xPos < -5000)
-//            {
-//                if (cursor.x < max_current_row_index)
-//                {
-//                    cursor.x += LCD_TEXT_WIDTH + CURSOR_OFFSET;
-//
-//                    // check if message should wrap
-////                    if ((message_data.message[current_message_index++] == CR)
-////                    {
-////                        cursor.x = COMPOSE_MESSAGE_CURSOR_X_MIN;
-////                        cursor.y += LCD_TEXT_HEIGHT;
-////                    }
-//                }
-//            }
-//
-//            if(yPos > 5000)
-//            {
-//                //MOVE down
-//                if (cursor.y < max_current_y_index)
-//                {
-//
-//                    // wipe current line of text arena
-//                    LCD_DrawSection(section_text_arena, (sizeof(section_text_arena)/sizeof(section_text_arena[0])));
-//                    uint16_t original_x_cursor = cursor.x;
-//
-//
-//                    uint16_t temp_start_index = current_message_index; // used to traverse message
-//                    uint16_t temp_end_index = 0;
-//                    // loop until one of the above mentioned cases are met
-//                    while (message_data.message[temp_start_index] != LF && message_data.message[temp_start_index] != VT)
-//                    {
-//                        temp_start_index++;
-//                        current_message_index++; //MAKE A DEFINE FOR THIS VALUE
-//                    }
-//
-//                    temp_start_index++; // don't include LF or VT
-//
-//                    //now have correct starting location
-//                    //need to find ending location
-//                    temp_end_index = temp_start_index;
-//                    while( (temp_end_index != MESSAGE_MAX_NUM_OF_CHARACTERS) && (message_data.message[temp_end_index] != 0x00) )
-//                    {
-//                        temp_end_index++;
-//                        current_message_index++; //MAKE A DEFINE FOR THIS VALUE
-//
-//                        if(message_data.message[temp_end_index] == CR)
-//                        {
-//                            current_message_index+=2;
-//                            break;
-//                        }
-//                        if(message_data.message[temp_end_index] == VT)
-//                        {
-//                            current_message_index++;
-//                            break;
-//                        }
-//
-//                    }
-//
-//                    current_message_index = temp_end_index;
-//
-//                    // handle edge case in which while loop above was broken by temp_index equaling 0
-//
-//                    cursor.x = COMPOSE_MESSAGE_CURSOR_X_MIN;
-//                    max_current_row_index = COMPOSE_MESSAGE_CURSOR_X_MIN;
-//                    // print next line of text
-//                    for (uint16_t i = temp_start_index; i < temp_end_index; i++)
-//                    {
-//                        // prevent LCD glitch
-//                        LCD_DrawRectangle(cursor.x, (cursor.x + LCD_TEXT_WIDTH),TEXT_ARENA_Y_MIN + 2, (TEXT_ARENA_Y_MIN + 2 + LCD_TEXT_HEIGHT),LCD_WHITE);
-//
-//                        LCD_PutChar(cursor.x + CURSOR_OFFSET,TEXT_ARENA_Y_MIN + 2, message_data.message[i], LCD_TEXT_COLOR);
-//                        cursor.x += LCD_TEXT_WIDTH + CURSOR_OFFSET;
-//                        max_current_row_index += LCD_TEXT_WIDTH + CURSOR_OFFSET;
-//
-//                    }
-//                    cursor.y += (LCD_TEXT_HEIGHT);
-//
-//                    if(max_current_row_index < original_x_cursor)
-//                    {
-//                          cursor.x = max_current_row_index;
-//                    }
-//                    else
-//                    {
-//                          cursor.x = original_x_cursor;
-//                    }
-//
-//                 //   max_current_row_index = cursor.x;
-//
-//                    //max_current_y_index -= LCD_TEXT_HEIGHT; //MIGHT NOT BE THE CORRECT MOVE
-//
-//                    G8RTOS_thread_sleep(300);
-//
-//                }
-//
-//                }
-//
-//
-//            }
-//            else if(yPos < -5000)
-//            {
-//
-//                //move up
-//                if(cursor.y != COMPOSE_MESSAGE_CURSOR_Y_MIN)
-//                {
-//                    // wipe current line of text arena
-//                    LCD_DrawSection(section_text_arena,(sizeof(section_text_arena)/sizeof(section_text_arena[0])));
-//
-//                    uint16_t original_x_cursor = cursor.x;
-//                    uint16_t temp_start_index = current_message_index; // used to traverse message
-//                    uint16_t temp_end_index=0;
-//                    uint32_t count=0;
-//                    bool found_end = false;
-//                         // loop until one of the above mentioned cases are met
-//                         while ((temp_start_index > 0) && (count < 2))
-//                         {
-//                             temp_start_index--;
-//                             if(message_data.message[temp_start_index] == LF || message_data.message[temp_start_index] == VT)
-//                             {
-//                                 count++;
-//                             }
-//                             if(!found_end && (message_data.message[temp_start_index] == LF || message_data.message[temp_start_index] == VT))
-//                             {
-//                                 found_end=true;
-//                                 temp_end_index = temp_start_index+1;
-//                                // temp_start_index++;
-//
-//                             }
-//                         }
-//                         // handle edge case in which while loop above was broken by temp_index equaling 0
-//                             if((message_data.message[temp_start_index] == LF || message_data.message[temp_start_index] == VT))
-//                             {
-//                                 temp_start_index++;
-//                             }
-////                         temp_start_index++;
-//
-//                         cursor.x = COMPOSE_MESSAGE_CURSOR_X_MIN;
-//                         max_current_row_index = COMPOSE_MESSAGE_CURSOR_X_MIN;
-//                         // print next line of text
-//                         for (uint16_t i = temp_start_index; i < temp_end_index; i++)
-//                         {
-//                             // prevent LCD glitch
-//                             LCD_DrawRectangle(cursor.x, (cursor.x + LCD_TEXT_WIDTH), TEXT_ARENA_Y_MIN + 2, (TEXT_ARENA_Y_MIN + 2 + LCD_TEXT_HEIGHT), LCD_WHITE);
-//
-//                             if(message_data.message[i] != CR && message_data.message[i]!= LF && message_data.message[i] != VT && message_data.message[i] != 0)
-//                             {
-//                                  LCD_PutChar(cursor.x + CURSOR_OFFSET, TEXT_ARENA_Y_MIN + 2, message_data.message[i], LCD_TEXT_COLOR);
-//                                  cursor.x += LCD_TEXT_WIDTH + CURSOR_OFFSET;
-//                                  max_current_row_index += LCD_TEXT_WIDTH + CURSOR_OFFSET;
-//                             }
-//
-//                             current_message_index--;
-//
-//                         }
-//                        // current_message_index--; //may or may not need to do this
-//                         cursor.y -=(LCD_TEXT_HEIGHT);
-//                         max_current_row_index = cursor.x;
-//                         cursor.x = original_x_cursor;
-//                       //  max_current_y_index+=(LCD_TEXT_HEIGHT);
-//
-//                         G8RTOS_thread_sleep(300);
-//
-//                }
-//
-//
-//            }
-//
-//
-//
-//        G8RTOS_semaphore_signal(&semaphore_cursor);
-//
-//
-//        G8RTOS_thread_sleep(200);
-//
-//    }
-//
-//}
-
 // TRY MAKING STATIC
 /************************************************************************************
 * Name: thread_mumessage_open_app
@@ -3035,43 +2851,6 @@ void thread_receive_message_data()
     G8RTOS_kill_current_thread(); //kill thread
 }
 
-
-<<<<<<< HEAD
-=======
-
-void thread_blink_cursor()
-{
-
-    while(1)
-    {
-
-        if(back_button_pressed)
-        {
-            back_button_pressed = false;
-            G8RTOS_kill_current_thread();
-        }
-        G8RTOS_semaphore_wait(&semaphore_cursor);
-
-        if(cursor_color == COMPOSE_MESSAGE_BACKGROUND_COLOR)
-        {
-            LCD_DrawRectangle(cursor.x, cursor.x+CURSOR_WIDTH, TEXT_ARENA_Y_MIN + 2, TEXT_ARENA_Y_MIN + 2 + CURSOR_HEIGHT, CURSOR_COLOR);
-            cursor_color = CURSOR_COLOR;
-        }
-        else
-        {
-            LCD_DrawRectangle(cursor.x, cursor.x+CURSOR_WIDTH, TEXT_ARENA_Y_MIN + 2, TEXT_ARENA_Y_MIN + 2 + CURSOR_HEIGHT, COMPOSE_MESSAGE_BACKGROUND_COLOR);
-             cursor_color = COMPOSE_MESSAGE_BACKGROUND_COLOR;
-        }
-        G8RTOS_semaphore_signal(&semaphore_cursor);
-
-        G8RTOS_thread_sleep(750);
-
-    }
-
-
-}
-
->>>>>>> 7156c47a811dcd0a4b710760ccb2e3baf57d6364
 void thread_send_pong_data()
 {
 

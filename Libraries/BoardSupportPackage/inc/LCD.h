@@ -261,6 +261,36 @@ void LCD_PrintTextSection(const Text *texts, uint16_t array_size);
 inline void LCD_Write_Data_Only(uint16_t data);
 
 /*******************************************************************************
+ * Function Name  : LCD_DrawExtraSmallImage
+ * Description    : Draw an extrasmall image
+ * Input          : xStart, xEnd, yStart, yEnd, uint8_t image_array[][20]
+ * Output         : None
+ * Return         : None
+ * Attention      : Must draw from left to right, top to bottom!
+ *******************************************************************************/
+void LCD_DrawExtraSmallImage(int16_t xStart, int16_t xEnd, int16_t yStart, int16_t yEnd, const uint8_t image_array[][20]);
+
+/*******************************************************************************
+ * Function Name  : LCD_DrawSmallImage
+ * Description    : Draw a small image
+ * Input          : xStart, xEnd, yStart, yEnd, uint8_t image_array[][55]
+ * Output         : None
+ * Return         : None
+ * Attention      : Must draw from left to right, top to bottom!
+ *******************************************************************************/
+void LCD_DrawSmallImage(int16_t xStart, int16_t xEnd, int16_t yStart, int16_t yEnd, const uint8_t image_array[][55]);
+
+/*******************************************************************************
+ * Function Name  : LCD_DrawBigImage
+ * Description    : Draw a big image
+ * Input          : xStart, xEnd, yStart, yEnd, image_array
+ * Output         : None
+ * Return         : None
+ * Attention      : Must draw from left to right, top to bottom!
+ *******************************************************************************/
+void LCD_DrawBigImage(int16_t xStart, int16_t xEnd, int16_t yStart, int16_t yEnd, uint8_t image_array[][320]);
+
+/*******************************************************************************
  * Function Name  : LCD_Clear
  * Description    : Fill the screen as the specified color
  * Input          : - Color: Screen Color
