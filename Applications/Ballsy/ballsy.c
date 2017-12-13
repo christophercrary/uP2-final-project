@@ -799,7 +799,7 @@ void aperiodic_port4(void)
         GPIO_disableInterrupt(GPIO_PORT_P4, GPIO_PIN0);
 
         // create LCD Touch Panel debouncing thread (highest priority)
-        G8RTOS_add_thread(thread_debounce_LCD, 50, "debounce_LCD");      // AM I HANDLING THE NAME CORRECTLY!??
+        G8RTOS_add_thread(thread_debounce_LCD, 20, "debounce_LCD");      // AM I HANDLING THE NAME CORRECTLY!??
     }
 //    // if up push-button triggered interrupt
 //    else if (status == 10)       // 10 = 2*(4+1)
@@ -1108,7 +1108,7 @@ void thread_debounce_LCD(void)
         if ( (!kill_ball()) && (ball_count < 20) )     // kill_ball is statically defined above
         {
             // create another ball thread
-            G8RTOS_add_thread(thread_ball, 60, "ball");
+            G8RTOS_add_thread(thread_ball, 30, "ball");
         }
 
         // signal that the LCD is available
